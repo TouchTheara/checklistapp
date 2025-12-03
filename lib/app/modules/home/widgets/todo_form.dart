@@ -27,6 +27,8 @@ class _TodoFormState extends State<TodoForm> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late TodoPriority _priority;
+  final TextEditingController _subtaskController = TextEditingController();
+  late List<SubTask> _subtasks;
 
   @override
   void initState() {
@@ -35,12 +37,14 @@ class _TodoFormState extends State<TodoForm> {
     _descriptionController =
         TextEditingController(text: widget.existing?.description);
     _priority = widget.existing?.priority ?? TodoPriority.medium;
+    _subtasks = widget.existing?.subtasks.toList() ?? [];
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _subtaskController.dispose();
     super.dispose();
   }
 
@@ -59,11 +63,13 @@ class _TodoFormState extends State<TodoForm> {
             title: title,
             description: description,
             priority: _priority,
+            subtasks: _subtasks,
           )
         : widget.existing!.copyWith(
             title: title,
             description: description,
             priority: _priority,
+            subtasks: _subtasks,
           );
 
     if (widget.existing == null) {
@@ -72,6 +78,29 @@ class _TodoFormState extends State<TodoForm> {
       repository.updateTodo(todo);
     }
     Navigator.of(context).maybePop();
+  }
+
+  void _addSubtask() {
+    final title = _subtaskController.text.trim();
+    if (title.isEmpty) return;
+    setState(() {
+      _subtasks.add(SubTask(title: title));
+      _subtaskController.clear();
+    });
+  }
+
+  void _toggleSubtask(String id) {
+    setState(() {
+      _subtasks = _subtasks
+          .map((sub) => sub.id == id ? sub.copyWith(isDone: !sub.isDone) : sub)
+          .toList();
+    });
+  }
+
+  void _removeSubtask(String id) {
+    setState(() {
+      _subtasks.removeWhere((sub) => sub.id == id);
+    });
   }
 
   Color _getPriorityColor(TodoPriority priority) {
@@ -236,6 +265,59 @@ class _TodoFormState extends State<TodoForm> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   const SizedBox(height: 32),
+                  Text(
+                    'Sub-tasks (optional)',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _subtaskController,
+                          decoration: const InputDecoration(
+                            hintText: 'Add a sub-task',
+                          ),
+                          onSubmitted: (_) => _addSubtask(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
+                        onPressed: _addSubtask,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_subtasks.isEmpty)
+                    Text(
+                      'No sub-tasks added.',
+                      style: theme.textTheme.bodyMedium,
+                    )
+                  else
+                    Column(
+                      children: _subtasks
+                          .map(
+                            (sub) => ListTile(
+                              dense: true,
+                              leading: Checkbox(
+                                value: sub.isDone,
+                                onChanged: (_) => _toggleSubtask(sub.id),
+                              ),
+                              title: Text(
+                                sub.title.isEmpty ? 'Untitled' : sub.title,
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () => _removeSubtask(sub.id),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [

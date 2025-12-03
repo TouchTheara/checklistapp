@@ -1,0 +1,144 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import '../../../data/models/todo.dart';
+import '../controllers/home_controller.dart';
+
+class TodoDetailView extends GetView<HomeController> {
+  const TodoDetailView({super.key, required this.todoId});
+
+  final String todoId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final todo = controller.todos.firstWhereOrNull((t) => t.id == todoId);
+      if (todo == null) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Task detail')),
+          body: const Center(child: Text('Task not found')),
+        );
+      }
+      final theme = Theme.of(context);
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(todo.title.isEmpty ? 'Task detail' : todo.title),
+          actions: [
+            IconButton(
+              icon: Icon(
+                todo.completedSubtasks == todo.totalSubtasks && todo.totalSubtasks > 0
+                    ? Icons.check_circle
+                    : Icons.task_alt_outlined,
+              ),
+              tooltip: 'Mark all sub-tasks done',
+              onPressed: () {
+                if (todo.subtasks.isEmpty) {
+                  controller.toggleCompleted(todo.id);
+                } else {
+                  for (final sub in todo.subtasks) {
+                    if (!sub.isDone) {
+                      controller.toggleSubtask(todo.id, sub.id);
+                    }
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _addSubtask(context),
+          icon: const Icon(Icons.add_task),
+          label: const Text('Add sub-task'),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(todo.title.isEmpty ? 'Untitled task' : todo.title,
+                        style: theme.textTheme.titleLarge),
+                    if (todo.description != null &&
+                        todo.description!.trim().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(todo.description!,
+                            style: theme.textTheme.bodyMedium),
+                      ),
+                    const SizedBox(height: 12),
+                    LinearProgressIndicator(
+                      value: todo.progress,
+                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${todo.completedSubtasks} of ${todo.totalSubtasks} sub-tasks complete',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Sub-tasks',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            if (todo.subtasks.isEmpty)
+              Text(
+                'No sub-tasks yet. Add checks to track progress.',
+                style: theme.textTheme.bodyMedium,
+              )
+            else
+              ...todo.subtasks.map(
+                (sub) => Card(
+                  child: CheckboxListTile(
+                    value: sub.isDone,
+                    title: Text(sub.title.isEmpty ? 'Untitled' : sub.title),
+                    onChanged: (_) =>
+                        controller.toggleSubtask(todo.id, sub.id),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Future<void> _addSubtask(BuildContext context) async {
+    final textController = TextEditingController();
+    final title = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add sub-task'),
+        content: TextField(
+          controller: textController,
+          decoration: const InputDecoration(
+            hintText: 'Sub-task title',
+          ),
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(ctx).pop(textController.text.trim()),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    if (title != null && title.isNotEmpty) {
+      controller.addSubtask(todoId, SubTask(title: title));
+    }
+  }
+}

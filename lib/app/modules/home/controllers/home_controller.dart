@@ -42,4 +42,8 @@ class HomeController extends GetxController {
   void deleteForever(String id) => _repository.deleteForever(id);
   void toggleCompleted(String id) => _repository.toggleCompleted(id);
   void changeSort(SortOption option) => _repository.changeSort(option);
+  void addSubtask(String todoId, SubTask subtask) =>
+      _repository.addSubtask(todoId, subtask);
+  void toggleSubtask(String todoId, String subtaskId) =>
+      _repository.toggleSubtask(todoId, subtaskId);
 }

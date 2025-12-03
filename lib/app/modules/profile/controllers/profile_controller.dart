@@ -40,5 +40,9 @@ class ProfileController extends GetxController {
     );
   }
 
+  Future<void> loadForUser(String? userId) async {
+    await _profileRepository.loadForUser(userId);
+  }
+
   String get supportEmail => ProfileRepository.supportEmail;
 }

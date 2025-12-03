@@ -10,12 +10,19 @@ class ProfileRepository extends GetxService {
   static const supportEmail = 'support@sitehq.com';
 
   final Rx<Profile> _profile = const Profile().obs;
+  String? _userId;
 
   Profile get profile => _profile.value;
 
   Future<ProfileRepository> init() async {
+    await loadForUser(null);
+    return this;
+  }
+
+  Future<void> loadForUser(String? userId) async {
+    _userId = userId;
     final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString(_profileKey);
+    final stored = prefs.getString(_key);
     if (stored != null) {
       try {
         final json = jsonDecode(stored) as Map<String, dynamic>;
@@ -24,7 +31,6 @@ class ProfileRepository extends GetxService {
         _profile.value = const Profile();
       }
     }
-    return this;
   }
 
   Future<void> updateProfile(Profile profile) async {
@@ -44,6 +50,9 @@ class ProfileRepository extends GetxService {
 
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_profileKey, jsonEncode(_profile.value.toJson()));
+    await prefs.setString(_key, jsonEncode(_profile.value.toJson()));
   }
+
+  String get _key =>
+      _userId == null ? _profileKey : '${_profileKey}_$_userId';
 }

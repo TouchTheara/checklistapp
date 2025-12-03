@@ -10,6 +10,8 @@ import '../../../data/models/profile.dart';
 import '../../../widgets/app_text_field.dart';
 import '../controllers/profile_controller.dart';
 import '../../support/views/support_view.dart';
+import '../../auth/views/auth_view.dart';
+import '../../legal/views/terms_privacy_view.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
@@ -20,6 +22,8 @@ class ProfileView extends GetView<ProfileController> {
     final appController = Get.find<AppController>();
     return Obx(() {
       final profile = controller.profile;
+      final displayName = appController.userName ?? profile.name;
+      final displayEmail = appController.userEmail ?? profile.email;
       final total = controller.totalCount;
       final completed = controller.completedCount;
       final completionRate = controller.completionRate;
@@ -38,12 +42,12 @@ class ProfileView extends GetView<ProfileController> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          profile.name,
+                          displayName,
                           style: theme.textTheme.titleMedium,
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          profile.email,
+                          displayEmail,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -144,6 +148,26 @@ class ProfileView extends GetView<ProfileController> {
               onTap: () => _showLanguageSheet(context, appController),
             ),
           ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.article_outlined),
+              title: Text('terms.privacy'.tr),
+              subtitle: Text('terms.description'.tr),
+              onTap: () => Get.to(() => const TermsPrivacyView()),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Sign out'),
+              onTap: () async {
+                await appController.logout();
+                Get.offAll(() => const AuthView());
+              },
+            ),
+          ),
         ],
       );
     });
@@ -169,7 +193,8 @@ class _ProfileStat extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+          color:
+              theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,18 +268,27 @@ class _ProfileAvatar extends StatelessWidget {
 
 Future<void> _openEditProfile(BuildContext context) async {
   final controller = Get.find<ProfileController>();
+  final appController = Get.find<AppController>();
+  final initial = controller.profile;
   final updated = await showModalBottomSheet<Profile>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     builder: (_) => _ProfileEditSheet(
-      initialProfile: controller.profile,
+      initialProfile: initial.copyWith(
+        name: appController.userName ?? initial.name,
+        email: appController.userEmail ?? initial.email,
+      ),
       notificationsEnabled: controller.notificationsEnabled,
     ),
   );
 
   if (updated != null) {
     await controller.saveProfile(
+      name: updated.name,
+      email: updated.email,
+    );
+    await appController.updateAuthProfile(
       name: updated.name,
       email: updated.email,
     );
@@ -490,8 +524,7 @@ class _ProfileEditSheetState extends State<_ProfileEditSheet> {
                           Profile(
                             name: _nameController.text.trim(),
                             email: _emailController.text.trim(),
-                            notificationsEnabled:
-                                widget.notificationsEnabled,
+                            notificationsEnabled: widget.notificationsEnabled,
                           ),
                         );
                       },

@@ -61,18 +61,22 @@ class Todo {
     this.isDeleted = false,
     this.deletedAt,
     this.updatedAt,
+    List<SubTask>? subtasks,
   })  : id = id ?? _uuid.v4(),
-        createdAt = createdAt ?? DateTime.now();
+        createdAt = createdAt ?? DateTime.now(),
+        subtasks = List.unmodifiable(subtasks ?? const []);
 
   factory Todo.create({
     required String title,
     String? description,
     TodoPriority priority = TodoPriority.medium,
+    List<SubTask>? subtasks,
   }) {
     return Todo(
       title: title.trim(),
       description: description?.trim(),
       priority: priority,
+      subtasks: subtasks,
     );
   }
 
@@ -85,6 +89,13 @@ class Todo {
   final bool isDeleted;
   final DateTime? deletedAt;
   final DateTime? updatedAt;
+  final List<SubTask> subtasks;
+
+  int get totalSubtasks => subtasks.length;
+  int get completedSubtasks =>
+      subtasks.where((sub) => sub.isDone).length;
+  double get progress =>
+      totalSubtasks == 0 ? (isCompleted ? 1 : 0) : completedSubtasks / totalSubtasks;
 
   Todo copyWith({
     String? id,
@@ -96,6 +107,7 @@ class Todo {
     bool? isDeleted,
     DateTime? deletedAt,
     DateTime? updatedAt,
+    List<SubTask>? subtasks,
   }) {
     return Todo(
       id: id ?? this.id,
@@ -107,6 +119,7 @@ class Todo {
       isDeleted: isDeleted ?? this.isDeleted,
       deletedAt: deletedAt ?? this.deletedAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      subtasks: subtasks ?? this.subtasks,
     );
   }
 
@@ -122,10 +135,17 @@ class Todo {
       'createdAt': createdAt.toIso8601String(),
       'isDeleted': isDeleted,
       'deletedAt': deletedAt?.toIso8601String(),
+      'subtasks': subtasks.map((sub) => sub.toJson()).toList(),
     };
   }
 
   factory Todo.fromJson(Map<String, dynamic> json) {
+    final subtasks = (json['subtasks'] as List?)
+            ?.map((e) => SubTask.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const [];
+    final isCompleted = (json['isCompleted'] as bool? ?? false) ||
+        (subtasks.isNotEmpty && subtasks.every((s) => s.isDone));
     return Todo(
       id: json['id'] as String,
       title: json['title'] as String,
@@ -134,12 +154,53 @@ class Todo {
         (p) => p.name == json['priority'],
         orElse: () => TodoPriority.medium,
       ),
-      isCompleted: json['isCompleted'] as bool? ?? false,
+      isCompleted: isCompleted,
       createdAt: DateTime.parse(json['createdAt'] as String),
       isDeleted: json['isDeleted'] as bool? ?? false,
       deletedAt: json['deletedAt'] != null
           ? DateTime.tryParse(json['deletedAt'] as String)
           : null,
+      subtasks: subtasks,
+    );
+  }
+}
+
+class SubTask {
+  SubTask({
+    String? id,
+    required this.title,
+    this.isDone = false,
+  }) : id = id ?? _uuid.v4();
+
+  final String id;
+  final String title;
+  final bool isDone;
+
+  SubTask copyWith({
+    String? id,
+    String? title,
+    bool? isDone,
+  }) {
+    return SubTask(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      isDone: isDone ?? this.isDone,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'isDone': isDone,
+    };
+  }
+
+  factory SubTask.fromJson(Map<String, dynamic> json) {
+    return SubTask(
+      id: json['id'] as String?,
+      title: json['title'] as String? ?? '',
+      isDone: json['isDone'] as bool? ?? false,
     );
   }
 }

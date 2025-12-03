@@ -10,6 +10,7 @@ import '../../done/views/done_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/todo_form.dart';
+import 'todo_detail_view.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});

@@ -4,10 +4,12 @@ import 'package:get/get.dart';
 import 'app/controllers/app_controller.dart';
 import 'app/data/repositories/profile_repository.dart';
 import 'app/data/repositories/todo_repository.dart';
+import 'app/data/services/auth_service.dart';
 import 'app/data/services/locale_service.dart';
 import 'app/data/services/onboarding_service.dart';
 import 'app/data/services/theme_service.dart';
 import 'app/i18n/app_translations.dart';
+import 'app/modules/auth/views/auth_view.dart';
 import 'app/modules/onboarding/views/onboarding_view.dart';
 import 'app/modules/home/bindings/home_binding.dart';
 import 'app/modules/home/views/home_view.dart';
@@ -19,11 +21,15 @@ void main() async {
   await Get.putAsync<ThemeService>(() => ThemeService().init());
   await Get.putAsync<OnboardingService>(() => OnboardingService().init());
   await Get.putAsync<LocaleService>(() => LocaleService().init());
+  await Get.putAsync<AuthService>(() => AuthService().init());
+  // Pre-register home-related controllers so navigation always finds them.
+  HomeBinding().dependencies();
   Get.put<AppController>(
     AppController(
       Get.find<ThemeService>(),
       Get.find<OnboardingService>(),
       Get.find<LocaleService>(),
+      Get.find<AuthService>(),
     ),
   );
   runApp(const ChecklistApp());
@@ -59,7 +65,9 @@ class ChecklistApp extends StatelessWidget {
         initialBinding: HomeBinding(),
         home: appController.showOnboarding
             ? const OnboardingView()
-            : const HomeView(),
+            : appController.isLoggedIn
+                ? const HomeView()
+                : const AuthView(),
       ),
     );
   }

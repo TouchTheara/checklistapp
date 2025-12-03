@@ -14,44 +14,19 @@ class TodoRepository extends GetxService {
 
   RxList<Todo> get rawTodos => _todos;
 
-  static final _defaultSeed = [
-    Todo(
-      title: 'Site safety walk',
-      description: 'Verify PPE usage, access control, and signage.',
-      priority: TodoPriority.high,
-    ),
-    Todo(
-      title: 'Concrete pour checklist',
-      description: 'Check forms, rebar, slump test, and curing plan.',
-      priority: TodoPriority.high,
-    ),
-    Todo(
-      title: 'Housekeeping sweep',
-      description: 'Remove trip hazards and tidy material staging areas.',
-      priority: TodoPriority.medium,
-    ),
-    Todo(
-      title: 'Equipment inspection',
-      description: 'Inspect lifts, cranes, and tag defective gear.',
-      priority: TodoPriority.high,
-    ),
-    Todo(
-      title: 'QA punch items',
-      description: 'Capture photos and notes for outstanding quality issues.',
-      priority: TodoPriority.medium,
-    ),
-    Todo(
-      title: 'Stretch and flex',
-      description: 'Brief warmup before shift start.',
-      priority: TodoPriority.low,
-    ),
-  ];
+  static final _defaultSeed = <Todo>[];
 
   Future<TodoRepository> init() async {
+    await loadForUser(null);
+    return this;
+  }
+
+  Future<void> loadForUser(String? userId) async {
+    _storageService.setUser(userId);
     final hasData = await _storageService.hasSavedData();
     if (hasData) {
       final savedTodos = await _storageService.loadTodos();
-      _todos.assignAll(savedTodos);
+      _todos.assignAll(_normalized(savedTodos));
     } else {
       _todos.assignAll(_defaultSeed);
       await _saveTodos();
@@ -61,11 +36,12 @@ class TodoRepository extends GetxService {
     if (savedSortOption != null) {
       _sortOption.value = savedSortOption;
     }
-    return this;
+    _todos.refresh();
   }
 
   SortOption get sortOption => _sortOption.value;
   bool get hasBinItems => _todos.any((todo) => todo.isDeleted);
+  StorageService get storageService => _storageService;
 
   int get totalCount => _activeTodos.length;
   int get completedCount =>
@@ -179,11 +155,56 @@ class TodoRepository extends GetxService {
     _saveTodos();
   }
 
+  void addSubtask(String todoId, SubTask subtask) {
+    final index = _todos.indexWhere((todo) => todo.id == todoId);
+    if (index == -1) return;
+    final current = _todos[index];
+    final updatedSubtasks = [...current.subtasks, subtask];
+    _todos[index] = current.copyWith(
+      subtasks: updatedSubtasks,
+      updatedAt: DateTime.now(),
+      isCompleted: updatedSubtasks.every((s) => s.isDone),
+    );
+    _todos.refresh();
+    _saveTodos();
+  }
+
+  void toggleSubtask(String todoId, String subtaskId) {
+    final index = _todos.indexWhere((todo) => todo.id == todoId);
+    if (index == -1) return;
+    final current = _todos[index];
+    final updatedSubtasks = current.subtasks
+        .map(
+          (s) => s.id == subtaskId ? s.copyWith(isDone: !s.isDone) : s,
+        )
+        .toList();
+    _todos[index] = current.copyWith(
+      subtasks: updatedSubtasks,
+      isCompleted: updatedSubtasks.isNotEmpty &&
+          updatedSubtasks.every((s) => s.isDone),
+      updatedAt: DateTime.now(),
+    );
+    _todos.refresh();
+    _saveTodos();
+  }
+
   void changeSort(SortOption option) {
     if (_sortOption.value == option) return;
     _sortOption.value = option;
     _todos.refresh();
     _saveSortOption();
+  }
+
+  List<Todo> _normalized(List<Todo> todos) {
+    return todos
+        .map(
+          (todo) => todo.copyWith(
+            isCompleted: todo.isCompleted ||
+                (todo.subtasks.isNotEmpty &&
+                    todo.subtasks.every((sub) => sub.isDone)),
+          ),
+        )
+        .toList();
   }
 
   List<Todo> get _activeTodos =>
