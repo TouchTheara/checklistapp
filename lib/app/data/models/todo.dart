@@ -59,12 +59,10 @@ class Todo {
     this.isCompleted = false,
     DateTime? createdAt,
     this.isDeleted = false,
-    DateTime? deletedAt,
-    DateTime? updatedAt,
+    this.deletedAt,
+    this.updatedAt,
   })  : id = id ?? _uuid.v4(),
-        createdAt = createdAt ?? DateTime.now(),
-        deletedAt = deletedAt,
-        updatedAt = updatedAt;
+        createdAt = createdAt ?? DateTime.now();
 
   factory Todo.create({
     required String title,

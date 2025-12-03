@@ -1,7 +1,7 @@
 class Profile {
   const Profile({
-    this.name = 'Checklist Pro',
-    this.email = 'team@acme.inc',
+    this.name = 'Site Safety Lead',
+    this.email = 'safety@sitehq.com',
     this.notificationsEnabled = true,
   });
 

@@ -22,8 +22,8 @@ class DoneView extends GetView<DoneController> {
         onToggle: controller.toggleCompleted,
         onDelete: controller.deleteTodo,
         onEdit: (todo) => onOpenForm(context, existing: todo),
-        emptyTitle: 'No tasks completed yet',
-        emptyDescription: 'Mark checklist items as done to review them here.',
+        emptyTitle: 'done.empty.title',
+        emptyDescription: 'done.empty.desc',
         emptyIcon: Icons.celebration_outlined,
         isDashboard: false,
       );

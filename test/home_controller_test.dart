@@ -1,11 +1,13 @@
 import 'package:checklistapp/app/data/models/todo.dart';
+import 'package:checklistapp/app/data/repositories/todo_repository.dart';
 import 'package:checklistapp/app/modules/home/controllers/home_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('HomeController (GetX)', () {
     test('adds todos and updates counts', () {
-      final controller = HomeController(seed: []);
+      final repository = TodoRepository(seed: []);
+      final controller = HomeController(repository: repository);
       expect(controller.totalCount, 0);
 
       controller.addTodo(
@@ -16,9 +18,10 @@ void main() {
     });
 
     test('toggle completed flips status', () {
-      final controller = HomeController(seed: [
+      final repository = TodoRepository(seed: [
         Todo.create(title: 'Focus block'),
       ]);
+      final controller = HomeController(repository: repository);
 
       final todoId = controller.todos.first.id;
       controller.toggleCompleted(todoId);
@@ -28,11 +31,12 @@ void main() {
     });
 
     test('sorting by priority high and low', () {
-      final controller = HomeController(seed: [
+      final repository = TodoRepository(seed: [
         Todo.create(title: 'Low', priority: TodoPriority.low),
         Todo.create(title: 'High', priority: TodoPriority.high),
         Todo.create(title: 'Medium', priority: TodoPriority.medium),
       ]);
+      final controller = HomeController(repository: repository);
 
       controller.changeSort(SortOption.priorityHighFirst);
       expect(controller.todos.first.title, 'High');
@@ -42,9 +46,10 @@ void main() {
     });
 
     test('deleteTodo moves item into bin, restoreTodo brings it back', () {
-      final controller = HomeController(seed: [
+      final repository = TodoRepository(seed: [
         Todo.create(title: 'Temp item'),
       ]);
+      final controller = HomeController(repository: repository);
 
       final todoId = controller.todos.first.id;
       controller.deleteTodo(todoId);
@@ -59,10 +64,11 @@ void main() {
     });
 
     test('emptyBin deletes all soft-deleted items permanently', () {
-      final controller = HomeController(seed: [
+      final repository = TodoRepository(seed: [
         Todo.create(title: 'Task A'),
         Todo.create(title: 'Task B'),
       ]);
+      final controller = HomeController(repository: repository);
 
       final ids = controller.todos.map((todo) => todo.id).toList();
       for (final id in ids) {
@@ -77,7 +83,7 @@ void main() {
     });
 
     test('changeTab updates active tab index', () {
-      final controller = HomeController(seed: []);
+      final controller = HomeController(repository: TodoRepository(seed: []));
       expect(controller.tabIndex, 0);
       controller.changeTab(1);
       expect(controller.tabIndex, 1);
@@ -86,11 +92,12 @@ void main() {
     });
 
     test('doneTodos reflects completed items', () {
-      final controller = HomeController(
+      final repository = TodoRepository(
         seed: [
           Todo.create(title: 'Complete me'),
         ],
       );
+      final controller = HomeController(repository: repository);
 
       expect(controller.doneTodos, isEmpty);
 
@@ -103,4 +110,3 @@ void main() {
     });
   });
 }
-

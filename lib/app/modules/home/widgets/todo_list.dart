@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../data/models/todo.dart';
 
@@ -9,8 +10,8 @@ class TodoListView extends StatelessWidget {
     required this.onToggle,
     required this.onDelete,
     required this.onEdit,
-    this.emptyTitle = 'Your checklist is empty',
-    this.emptyDescription = 'Tap “Add task” to create your first item.',
+    this.emptyTitle = 'empty.title',
+    this.emptyDescription = 'empty.desc',
     this.emptyIcon = Icons.check_circle_outline,
     this.isDashboard = false,
   });
@@ -297,27 +298,31 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 72,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(height: 16),
+      child: Semantics(
+        container: true,
+        label: '$title. $description',
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 72,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
           Text(
-            title,
+            title.tr,
             style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           Text(
-            description,
+            description.tr,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

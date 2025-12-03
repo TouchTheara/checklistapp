@@ -7,7 +7,7 @@ import '../models/profile.dart';
 
 class ProfileRepository extends GetxService {
   static const _profileKey = 'profile';
-  static const supportEmail = 'support@checklist.app';
+  static const supportEmail = 'support@sitehq.com';
 
   final Rx<Profile> _profile = const Profile().obs;
 

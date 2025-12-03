@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../data/models/todo.dart';
 
@@ -27,7 +28,7 @@ class DashboardCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Personal dashboard',
+              'dashboard.card.title'.tr,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
@@ -72,9 +73,9 @@ class _CompletionInsight extends StatelessWidget {
     final percentage = (rate * 100).toStringAsFixed(0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+          children: [
         Text(
-          'Completion',
+          'dashboard.completion'.tr,
           style: theme.textTheme.labelLarge,
         ),
         const SizedBox(height: 8),
@@ -126,7 +127,7 @@ class _PriorityBreakdown extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Priority mix',
+          'dashboard.priority'.tr,
           style: theme.textTheme.labelLarge,
         ),
         const SizedBox(height: 8),
@@ -198,4 +199,3 @@ Color _priorityColor(TodoPriority priority, ColorScheme scheme) {
       return scheme.error;
   }
 }
-

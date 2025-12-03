@@ -12,20 +12,37 @@ class TodoRepository extends GetxService {
   final RxList<Todo> _todos;
   final Rx<SortOption> _sortOption = SortOption.priorityHighFirst.obs;
 
+  RxList<Todo> get rawTodos => _todos;
+
   static final _defaultSeed = [
     Todo(
-      title: 'Prep project scope',
-      description: 'Review backlog and outline sprint goals.',
+      title: 'Site safety walk',
+      description: 'Verify PPE usage, access control, and signage.',
       priority: TodoPriority.high,
     ),
     Todo(
-      title: 'Deep work block',
-      description: 'Focus for two hours on blockers.',
+      title: 'Concrete pour checklist',
+      description: 'Check forms, rebar, slump test, and curing plan.',
+      priority: TodoPriority.high,
+    ),
+    Todo(
+      title: 'Housekeeping sweep',
+      description: 'Remove trip hazards and tidy material staging areas.',
       priority: TodoPriority.medium,
     ),
     Todo(
-      title: 'Walk outside',
-      description: 'Short break to reset energy.',
+      title: 'Equipment inspection',
+      description: 'Inspect lifts, cranes, and tag defective gear.',
+      priority: TodoPriority.high,
+    ),
+    Todo(
+      title: 'QA punch items',
+      description: 'Capture photos and notes for outstanding quality issues.',
+      priority: TodoPriority.medium,
+    ),
+    Todo(
+      title: 'Stretch and flex',
+      description: 'Brief warmup before shift start.',
       priority: TodoPriority.low,
     ),
   ];

@@ -150,14 +150,14 @@ class _TodoFormState extends State<TodoForm> {
                   AppTextField(
                     fieldKey: TodoForm.titleFieldKey,
                     controller: _titleController,
-                    label: 'Title',
-                    hintText: 'Enter task title',
+                    label: 'todo.title'.tr,
+                    hintText: 'todo.title.hint'.tr,
                     prefixIcon: const Icon(Icons.title),
                     autofocus: true,
                     textInputAction: TextInputAction.next,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a title';
+                        return 'todo.title.error'.tr;
                       }
                       return null;
                     },
@@ -166,8 +166,8 @@ class _TodoFormState extends State<TodoForm> {
                   AppTextField(
                     fieldKey: TodoForm.descriptionFieldKey,
                     controller: _descriptionController,
-                    label: 'Description',
-                    hintText: 'Add a description (optional)',
+                    label: 'todo.desc'.tr,
+                    hintText: 'todo.desc.hint'.tr,
                     prefixIcon: const Icon(Icons.description),
                     keyboardType: TextInputType.multiline,
                     textInputAction: TextInputAction.newline,
@@ -181,7 +181,7 @@ class _TodoFormState extends State<TodoForm> {
                     initialValue: _priority,
                     style: theme.textTheme.bodyLarge,
                     decoration: InputDecoration(
-                      labelText: 'Priority',
+                      labelText: 'todo.priority'.tr,
                       prefixIcon: Icon(
                         _getPriorityIcon(_priority),
                         color: _getPriorityColor(_priority),
@@ -195,7 +195,7 @@ class _TodoFormState extends State<TodoForm> {
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
-                          color: colorScheme.outline.withOpacity(0.5),
+                          color: colorScheme.outline.withValues(alpha: 0.5),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(

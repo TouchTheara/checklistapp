@@ -32,18 +32,16 @@ class HomeView extends GetView<HomeController> {
     final shouldEmpty = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Empty bin?'),
-            content: const Text(
-              'This will permanently delete all items in your bin.',
-            ),
+            title: Text('bin.confirm.title'.tr),
+            content: Text('bin.confirm.body'.tr),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: Text('bin.confirm.cancel'.tr),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Empty bin'),
+                child: Text('bin.confirm.ok'.tr),
               ),
             ],
           ),
@@ -53,8 +51,10 @@ class HomeView extends GetView<HomeController> {
     if (shouldEmpty) {
       binController.emptyBin();
       Get.snackbar(
-          'Bin emptied', 'All discarded items were permanently deleted',
-          snackPosition: SnackPosition.BOTTOM);
+        'bin.emptied.title'.tr,
+        'bin.emptied.desc'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -64,10 +64,10 @@ class HomeView extends GetView<HomeController> {
     return Obx(() {
       final tabIndex = controller.tabIndex;
       final titles = <String>[
-        'Checklist Dashboard',
-        'Done',
-        'Bin',
-        'Profile',
+        'tab.dashboard'.tr,
+        'tab.completed'.tr,
+        'tab.archive'.tr,
+        'tab.profile'.tr,
       ];
       return Scaffold(
         appBar: AppBar(
@@ -83,7 +83,7 @@ class HomeView extends GetView<HomeController> {
                         ? () => _confirmEmptyBin(context, binController)
                         : null,
                     icon: const Icon(Icons.delete_sweep_outlined),
-                    label: const Text('Empty bin'),
+                    label: Text('action.emptyArchive'.tr),
                   );
                 },
               ),
@@ -94,7 +94,7 @@ class HomeView extends GetView<HomeController> {
                 key: addTodoFabKey,
                 onPressed: () => _openTodoForm(context),
                 icon: const Icon(Icons.add),
-                label: const Text('Add task'),
+                label: Text('action.addTask'.tr),
               )
             : null,
         body: IndexedStack(
@@ -109,26 +109,26 @@ class HomeView extends GetView<HomeController> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: tabIndex,
           onDestinationSelected: controller.changeTab,
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.fact_check_outlined),
-              selectedIcon: Icon(Icons.fact_check),
-              label: 'Checklist',
+              icon: const Icon(Icons.fact_check_outlined),
+              selectedIcon: const Icon(Icons.fact_check),
+              label: 'nav.checks'.tr,
             ),
             NavigationDestination(
-              icon: Icon(Icons.done_all_outlined),
-              selectedIcon: Icon(Icons.done_all),
-              label: 'Done',
+              icon: const Icon(Icons.done_all_outlined),
+              selectedIcon: const Icon(Icons.done_all),
+              label: 'nav.completed'.tr,
             ),
             NavigationDestination(
-              icon: Icon(Icons.delete_outline),
-              selectedIcon: Icon(Icons.delete),
-              label: 'Bin',
+              icon: const Icon(Icons.delete_outline),
+              selectedIcon: const Icon(Icons.delete),
+              label: 'nav.archive'.tr,
             ),
             NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Profile',
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: 'nav.profile'.tr,
             ),
           ],
         ),
@@ -144,7 +144,7 @@ class _SortMenu extends GetView<DashboardController> {
   Widget build(BuildContext context) {
     return Obx(
       () => PopupMenuButton<SortOption>(
-        tooltip: 'Sort checklist',
+        tooltip: 'action.sort'.tr,
         icon: const Icon(Icons.sort),
         initialValue: controller.sortOption,
         onSelected: controller.changeSort,

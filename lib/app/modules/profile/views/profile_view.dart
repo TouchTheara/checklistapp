@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
+import '../../../controllers/app_controller.dart';
 import '../../../data/models/profile.dart';
 import '../../../widgets/app_text_field.dart';
 import '../controllers/profile_controller.dart';
+import '../../support/views/support_view.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
@@ -12,6 +13,7 @@ class ProfileView extends GetView<ProfileController> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appController = Get.find<AppController>();
     return Obx(() {
       final profile = controller.profile;
       final total = controller.totalCount;
@@ -54,7 +56,7 @@ class ProfileView extends GetView<ProfileController> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Edit profile',
+                    tooltip: 'profile.edit'.tr,
                     onPressed: () => _openEditProfile(context),
                     icon: const Icon(Icons.edit_outlined),
                   ),
@@ -70,26 +72,26 @@ class ProfileView extends GetView<ProfileController> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Productivity snapshot',
+                    'profile.snapshot'.tr,
                     style: theme.textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       _ProfileStat(
-                        label: 'Total tasks',
+                        label: 'profile.total'.tr,
                         value: total.toString(),
                         icon: Icons.fact_check,
                       ),
                       const SizedBox(width: 12),
                       _ProfileStat(
-                        label: 'Completed',
+                        label: 'profile.completed'.tr,
                         value: completed.toString(),
                         icon: Icons.done_all,
                       ),
                       const SizedBox(width: 12),
                       _ProfileStat(
-                        label: 'Completion',
+                        label: 'profile.completion'.tr,
                         value: '${(completionRate * 100).round()}%',
                         icon: Icons.trending_up,
                       ),
@@ -101,24 +103,49 @@ class ProfileView extends GetView<ProfileController> {
           ),
           const SizedBox(height: 12),
           Card(
-            child: ListTile(
-              leading: const Icon(Icons.notifications_none),
-              title: const Text('Notifications'),
-              subtitle: const Text('Stay on top of reminders and daily goals'),
-              trailing: Switch(
-                value: controller.notificationsEnabled,
-                onChanged: (enabled) =>
-                    controller.toggleNotifications(enabled),
-              ),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.dark_mode_outlined),
+                  title: Text('profile.darkmode'.tr),
+                  subtitle: Text('profile.darkmode.desc'.tr),
+                  value: appController.themeMode == ThemeMode.dark,
+                  onChanged: (enabled) => appController.changeTheme(
+                    enabled ? ThemeMode.dark : ThemeMode.light,
+                  ),
+                ),
+                const Divider(height: 0),
+                SwitchListTile(
+                  secondary: const Icon(Icons.notifications_none),
+                  title: Text('profile.notifications'.tr),
+                  subtitle: Text('profile.notifications.desc'.tr),
+                  value: controller.notificationsEnabled,
+                  onChanged: (enabled) =>
+                      controller.toggleNotifications(enabled),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
           Card(
             child: ListTile(
               leading: const Icon(Icons.help_outline),
-              title: const Text('Help & support'),
-              subtitle: const Text('View FAQs or contact support'),
-              onTap: () => _openSupportSheet(context),
+              title: Text('profile.help'.tr),
+              subtitle: Text('support.faq.desc'.tr),
+              onTap: () => Get.to(() => const SupportView()),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.language),
+              title: Text('settings.language'.tr),
+              subtitle: Text(
+                appController.locale.languageCode == 'km'
+                    ? 'settings.language.khmer'.tr
+                    : 'settings.language.english'.tr,
+              ),
+              onTap: () => _showLanguageSheet(context, appController),
             ),
           ),
         ],
@@ -146,7 +173,7 @@ class _ProfileStat extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: theme.colorScheme.surfaceVariant.withOpacity(0.7),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,45 +225,28 @@ Future<void> _openEditProfile(BuildContext context) async {
   }
 }
 
-void _openSupportSheet(BuildContext context) {
-  final controller = Get.find<ProfileController>();
+void _showLanguageSheet(BuildContext context, AppController appController) {
   showModalBottomSheet<void>(
     context: context,
-    useSafeArea: true,
-    builder: (bottomSheetContext) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
+    builder: (ctx) {
+      return SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.article_outlined),
-              title: const Text('View FAQs'),
-              subtitle:
-                  const Text('Quick answers to common checklist questions'),
+              leading: const Icon(Icons.language),
+              title: Text('settings.language.english'.tr),
               onTap: () {
-                Navigator.of(bottomSheetContext).pop();
-                Get.snackbar(
-                  'FAQs',
-                  'FAQs are coming soon. Reach out if you need help!',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
+                appController.changeLocale(const Locale('en', 'US'));
+                Navigator.of(ctx).pop();
               },
             ),
             ListTile(
-              leading: const Icon(Icons.mail_outline),
-              title: const Text('Contact support'),
-              subtitle: Text(controller.supportEmail),
-              onTap: () async {
-                await Clipboard.setData(
-                  ClipboardData(text: controller.supportEmail),
-                );
-                Navigator.of(bottomSheetContext).pop();
-                Get.snackbar(
-                  'Support email copied',
-                  'Paste it into your mail app to contact us.',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
+              leading: const Icon(Icons.language),
+              title: Text('settings.language.khmer'.tr),
+              onTap: () {
+                appController.changeLocale(const Locale('km', 'KH'));
+                Navigator.of(ctx).pop();
               },
             ),
           ],
@@ -313,7 +323,7 @@ class _ProfileEditSheetState extends State<_ProfileEditSheet> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Edit profile',
+                        'profile.edit'.tr,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -324,14 +334,14 @@ class _ProfileEditSheetState extends State<_ProfileEditSheet> {
                 const SizedBox(height: 24),
                 AppTextField(
                   controller: _nameController,
-                  label: 'Name',
-                  hintText: 'Your name',
+                  label: 'form.name'.tr,
+                  hintText: 'form.name.hint'.tr,
                   prefixIcon: const Icon(Icons.badge_outlined),
                   textInputAction: TextInputAction.next,
                   textCapitalization: TextCapitalization.words,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your name';
+                      return 'form.name.error'.tr;
                     }
                     return null;
                   },
@@ -339,17 +349,17 @@ class _ProfileEditSheetState extends State<_ProfileEditSheet> {
                 const SizedBox(height: 20),
                 AppTextField(
                   controller: _emailController,
-                  label: 'Email',
-                  hintText: 'you@example.com',
+                  label: 'form.email'.tr,
+                  hintText: 'form.email.hint'.tr,
                   prefixIcon: const Icon(Icons.alternate_email),
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.done,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your email';
+                      return 'form.email.error'.tr;
                     }
                     if (!value.contains('@')) {
-                      return 'Enter a valid email';
+                      return 'form.email.invalid'.tr;
                     }
                     return null;
                   },
@@ -369,7 +379,7 @@ class _ProfileEditSheetState extends State<_ProfileEditSheet> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Cancel'),
+                      child: Text('form.cancel'.tr),
                     ),
                     const SizedBox(width: 12),
                     FilledButton(
@@ -395,7 +405,7 @@ class _ProfileEditSheetState extends State<_ProfileEditSheet> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Save'),
+                      child: Text('form.save'.tr),
                     ),
                   ],
                 ),

@@ -11,18 +11,16 @@ class BinView extends GetView<BinController> {
     final shouldEmpty = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Empty bin?'),
-            content: const Text(
-              'This will permanently delete all items in your bin.',
-            ),
+            title: Text('bin.confirm.title'.tr),
+            content: Text('bin.confirm.body'.tr),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: Text('bin.confirm.cancel'.tr),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Empty bin'),
+                child: Text('bin.confirm.ok'.tr),
               ),
             ],
           ),
@@ -31,8 +29,11 @@ class BinView extends GetView<BinController> {
 
     if (shouldEmpty) {
       controller.emptyBin();
-      Get.snackbar('Bin emptied', 'All discarded items were permanently deleted',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'bin.emptied.title'.tr,
+        'bin.emptied.desc'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -40,7 +41,7 @@ class BinView extends GetView<BinController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bin'),
+        title: Text('tab.archive'.tr),
         actions: [
           Obx(
             () => TextButton.icon(
@@ -48,7 +49,7 @@ class BinView extends GetView<BinController> {
                   ? () => _confirmEmpty(context)
                   : null,
               icon: const Icon(Icons.delete_sweep_outlined),
-              label: const Text('Empty bin'),
+              label: Text('action.emptyArchive'.tr),
             ),
           ),
         ],
@@ -181,12 +182,12 @@ class _BinEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Bin is empty',
+            'bin.empty.title'.tr,
             style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           Text(
-            'Deleted items stay here temporarily until you empty the bin.',
+            'bin.empty.desc'.tr,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,
           ),
