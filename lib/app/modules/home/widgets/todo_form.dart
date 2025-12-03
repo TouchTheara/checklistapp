@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../data/models/todo.dart';
-import '../controllers/home_controller.dart';
+import '../../../data/repositories/todo_repository.dart';
+import '../../../widgets/app_text_field.dart';
 
 class TodoForm extends StatefulWidget {
   const TodoForm({
@@ -47,7 +48,7 @@ class _TodoFormState extends State<TodoForm> {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-    final controller = Get.find<HomeController>();
+    final repository = Get.find<TodoRepository>();
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim().isEmpty
         ? null
@@ -66,9 +67,9 @@ class _TodoFormState extends State<TodoForm> {
           );
 
     if (widget.existing == null) {
-      controller.addTodo(todo);
+      repository.addTodo(todo);
     } else {
-      controller.updateTodo(todo);
+      repository.updateTodo(todo);
     }
     Navigator.of(context).maybePop();
   }
@@ -146,45 +147,12 @@ class _TodoFormState extends State<TodoForm> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  TextFormField(
-                    key: TodoForm.titleFieldKey,
+                  AppTextField(
+                    fieldKey: TodoForm.titleFieldKey,
                     controller: _titleController,
-                    style: theme.textTheme.bodyLarge,
-                    decoration: InputDecoration(
-                      labelText: 'Title',
-                      hintText: 'Enter task title',
-                      prefixIcon: const Icon(Icons.title),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: colorScheme.outline),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: colorScheme.outline.withValues(alpha: 128),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide:
-                            BorderSide(color: colorScheme.primary, width: 2),
-                      ),
-                      errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: colorScheme.error),
-                      ),
-                      focusedErrorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide:
-                            BorderSide(color: colorScheme.error, width: 2),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                    ),
+                    label: 'Title',
+                    hintText: 'Enter task title',
+                    prefixIcon: const Icon(Icons.title),
                     autofocus: true,
                     textInputAction: TextInputAction.next,
                     validator: (value) {
@@ -195,41 +163,17 @@ class _TodoFormState extends State<TodoForm> {
                     },
                   ),
                   const SizedBox(height: 20),
-                  TextFormField(
-                    key: TodoForm.descriptionFieldKey,
+                  AppTextField(
+                    fieldKey: TodoForm.descriptionFieldKey,
                     controller: _descriptionController,
-                    style: theme.textTheme.bodyMedium,
+                    label: 'Description',
+                    hintText: 'Add a description (optional)',
+                    prefixIcon: const Icon(Icons.description),
                     keyboardType: TextInputType.multiline,
-                    textAlignVertical: TextAlignVertical.center,
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                      hintText: 'Add a description (optional)',
-                      prefixIcon: const Icon(Icons.description),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: colorScheme.outline),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: colorScheme.outline.withValues(alpha: 128),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide:
-                            BorderSide(color: colorScheme.primary, width: 2),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                    ),
                     textInputAction: TextInputAction.newline,
                     minLines: 1,
                     maxLines: null,
+                    textCapitalization: TextCapitalization.sentences,
                   ),
                   const SizedBox(height: 20),
                   DropdownButtonFormField<TodoPriority>(

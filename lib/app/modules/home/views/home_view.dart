@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../data/models/todo.dart';
+import '../../bin/controllers/bin_controller.dart';
+import '../../bin/views/bin_view.dart';
+import '../../dashboard/controllers/dashboard_controller.dart';
+import '../../dashboard/views/dashboard_view.dart';
+import '../../done/views/done_view.dart';
+import '../../profile/views/profile_view.dart';
 import '../controllers/home_controller.dart';
-import '../widgets/dashboard_card.dart';
 import '../widgets/todo_form.dart';
-import '../widgets/todo_list.dart';
-import 'bin_view.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -22,7 +25,10 @@ class HomeView extends GetView<HomeController> {
     );
   }
 
-  Future<void> _confirmEmptyBin(BuildContext context) async {
+  Future<void> _confirmEmptyBin(
+    BuildContext context,
+    BinController binController,
+  ) async {
     final shouldEmpty = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
@@ -45,7 +51,7 @@ class HomeView extends GetView<HomeController> {
         false;
 
     if (shouldEmpty) {
-      controller.emptyBin();
+      binController.emptyBin();
       Get.snackbar(
           'Bin emptied', 'All discarded items were permanently deleted',
           snackPosition: SnackPosition.BOTTOM);
@@ -54,13 +60,14 @@ class HomeView extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
+    final binController = Get.find<BinController>();
     return Obx(() {
       final tabIndex = controller.tabIndex;
-      final hasBinItems = controller.hasBinItems;
       final titles = <String>[
         'Checklist Dashboard',
         'Done',
         'Bin',
+        'Profile',
       ];
       return Scaffold(
         appBar: AppBar(
@@ -68,10 +75,17 @@ class HomeView extends GetView<HomeController> {
           actions: [
             if (tabIndex == 0) const _SortMenu(),
             if (tabIndex == 2)
-              TextButton.icon(
-                onPressed: hasBinItems ? () => _confirmEmptyBin(context) : null,
-                icon: const Icon(Icons.delete_sweep_outlined),
-                label: const Text('Empty bin'),
+              Obx(
+                () {
+                  final hasBinItems = binController.hasBinItems;
+                  return TextButton.icon(
+                    onPressed: hasBinItems
+                        ? () => _confirmEmptyBin(context, binController)
+                        : null,
+                    icon: const Icon(Icons.delete_sweep_outlined),
+                    label: const Text('Empty bin'),
+                  );
+                },
               ),
           ],
         ),
@@ -86,40 +100,10 @@ class HomeView extends GetView<HomeController> {
         body: IndexedStack(
           index: tabIndex,
           children: [
-            Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: DashboardCard(
-                    total: controller.totalCount,
-                    completed: controller.completedCount,
-                    rate: controller.completionRate,
-                    priorityBreakdown: controller.priorityBreakdown,
-                  ),
-                ),
-                Expanded(
-                  child: TodoListView(
-                    todos: controller.todos,
-                    onToggle: controller.toggleCompleted,
-                    onDelete: controller.deleteTodo,
-                    onEdit: (todo) => _openTodoForm(context, existing: todo),
-                    isDashboard: true,
-                  ),
-                ),
-              ],
-            ),
-            TodoListView(
-              todos: controller.doneTodos,
-              onToggle: controller.toggleCompleted,
-              onDelete: controller.deleteTodo,
-              onEdit: (todo) => _openTodoForm(context, existing: todo),
-              emptyTitle: 'No tasks completed yet',
-              emptyDescription:
-                  'Mark checklist items as done to review them here.',
-              emptyIcon: Icons.celebration_outlined,
-              isDashboard: false,
-            ),
+            DashboardView(onOpenForm: _openTodoForm),
+            DoneView(onOpenForm: _openTodoForm),
             const BinBody(),
+            const ProfileView(),
           ],
         ),
         bottomNavigationBar: NavigationBar(
@@ -141,6 +125,11 @@ class HomeView extends GetView<HomeController> {
               selectedIcon: Icon(Icons.delete),
               label: 'Bin',
             ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
           ],
         ),
       );
@@ -148,7 +137,7 @@ class HomeView extends GetView<HomeController> {
   }
 }
 
-class _SortMenu extends GetView<HomeController> {
+class _SortMenu extends GetView<DashboardController> {
   const _SortMenu();
 
   @override

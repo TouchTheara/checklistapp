@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../data/models/todo.dart';
-import '../controllers/home_controller.dart';
+import '../controllers/bin_controller.dart';
 
-class BinView extends GetView<HomeController> {
+class BinView extends GetView<BinController> {
   const BinView({super.key});
 
   Future<void> _confirmEmpty(BuildContext context) async {
@@ -58,7 +58,7 @@ class BinView extends GetView<HomeController> {
   }
 }
 
-class BinBody extends GetView<HomeController> {
+class BinBody extends GetView<BinController> {
   const BinBody({super.key});
 
   @override
@@ -195,4 +195,3 @@ class _BinEmptyState extends StatelessWidget {
     );
   }
 }
-

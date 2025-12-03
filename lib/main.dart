@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'app/data/repositories/profile_repository.dart';
+import 'app/data/repositories/todo_repository.dart';
 import 'app/modules/home/bindings/home_binding.dart';
 import 'app/modules/home/views/home_view.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Get.putAsync<TodoRepository>(() => TodoRepository().init());
+  await Get.putAsync<ProfileRepository>(() => ProfileRepository().init());
   runApp(const ChecklistApp());
 }
 
