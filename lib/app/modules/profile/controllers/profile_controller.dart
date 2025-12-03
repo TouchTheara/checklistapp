@@ -12,6 +12,7 @@ class ProfileController extends GetxController {
 
   Profile get profile => _profileRepository.profile;
   bool get notificationsEnabled => _profileRepository.profile.notificationsEnabled;
+  String? get avatarPath => _profileRepository.profile.avatarPath;
 
   int get totalCount => _todoRepository.totalCount;
   int get completedCount => _todoRepository.completedCount;
@@ -31,6 +32,12 @@ class ProfileController extends GetxController {
 
   Future<void> toggleNotifications(bool enabled) {
     return _profileRepository.toggleNotifications(enabled);
+  }
+
+  Future<void> updateAvatar(String? path) async {
+    await _profileRepository.updateProfile(
+      _profileRepository.profile.copyWith(avatarPath: path),
+    );
   }
 
   String get supportEmail => ProfileRepository.supportEmail;

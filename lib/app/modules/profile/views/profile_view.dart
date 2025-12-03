@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../controllers/app_controller.dart';
 import '../../../data/models/profile.dart';
@@ -27,15 +31,7 @@ class ProfileView extends GetView<ProfileController> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.person,
-                      size: 32,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
+                  _ProfileAvatar(controller: controller),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -200,6 +196,51 @@ class _ProfileStat extends StatelessWidget {
   }
 }
 
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.controller});
+
+  final ProfileController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final avatarPath = controller.avatarPath;
+    final hasImage = avatarPath != null && avatarPath.isNotEmpty;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        CircleAvatar(
+          radius: 32,
+          backgroundColor: theme.colorScheme.primaryContainer,
+          backgroundImage:
+              hasImage ? FileImage(File(avatarPath)) as ImageProvider : null,
+          child: hasImage
+              ? null
+              : Icon(
+                  Icons.person,
+                  size: 32,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+        ),
+        Positioned(
+          bottom: -4,
+          right: -4,
+          child: IconButton(
+            tooltip: 'profile.edit'.tr,
+            style: IconButton.styleFrom(
+              backgroundColor: theme.colorScheme.surface,
+              minimumSize: const Size(32, 32),
+              padding: const EdgeInsets.all(4),
+            ),
+            icon: const Icon(Icons.camera_alt_outlined, size: 18),
+            onPressed: () => _showImageSourceSheet(context),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 Future<void> _openEditProfile(BuildContext context) async {
   final controller = Get.find<ProfileController>();
   final updated = await showModalBottomSheet<Profile>(
@@ -218,8 +259,8 @@ Future<void> _openEditProfile(BuildContext context) async {
       email: updated.email,
     );
     Get.snackbar(
-      'Profile updated',
-      'Your details were saved.',
+      'profile.edit'.tr,
+      'profile.photo.updated'.tr,
       snackPosition: SnackPosition.BOTTOM,
     );
   }
@@ -254,6 +295,64 @@ void _showLanguageSheet(BuildContext context, AppController appController) {
       );
     },
   );
+}
+
+Future<void> _showImageSourceSheet(BuildContext context) async {
+  if (!GetPlatform.isAndroid && !GetPlatform.isIOS) {
+    Get.snackbar(
+      'profile.edit'.tr,
+      'profile.photo.unsupported'.tr,
+      snackPosition: SnackPosition.BOTTOM,
+    );
+    return;
+  }
+
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    builder: (ctx) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text('profile.photo.gallery'.tr),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text('profile.photo.camera'.tr),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  if (source == null) return;
+  await _pickProfileImage(context, source);
+}
+
+Future<void> _pickProfileImage(BuildContext context, ImageSource source) async {
+  final controller = Get.find<ProfileController>();
+  final picker = ImagePicker();
+  try {
+    final result = await picker.pickImage(source: source);
+    if (result == null) return;
+    await controller.updateAvatar(result.path);
+    Get.snackbar(
+      'profile.edit'.tr,
+      'profile.photo.updated'.tr,
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  } on PlatformException {
+    Get.snackbar(
+      'profile.edit'.tr,
+      'profile.photo.error'.tr,
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
 }
 
 class _ProfileEditSheet extends StatefulWidget {

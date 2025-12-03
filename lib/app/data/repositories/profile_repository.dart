@@ -37,6 +37,11 @@ class ProfileRepository extends GetxService {
     await _persist();
   }
 
+  Future<void> updateAvatar(String? path) async {
+    _profile.value = _profile.value.copyWith(avatarPath: path);
+    await _persist();
+  }
+
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_profileKey, jsonEncode(_profile.value.toJson()));
