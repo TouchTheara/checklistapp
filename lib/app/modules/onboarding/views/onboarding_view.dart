@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../controllers/app_controller.dart';
-import '../../auth/views/auth_view.dart';
+import '../../../routes/app_routes.dart';
 
 class OnboardingView extends StatefulWidget {
   const OnboardingView({super.key});
@@ -47,7 +47,7 @@ class _OnboardingViewState extends State<OnboardingView> {
   Future<void> _finish() async {
     final appController = Get.find<AppController>();
     await appController.completeOnboarding();
-    Get.offAll(() => const AuthView());
+    Get.offAllNamed(Routes.auth);
   }
 
   @override

@@ -55,6 +55,12 @@ class TodoRepository extends GetxService {
               _activeTodos.where((todo) => todo.priority == priority).length,
       };
 
+  List<Todo> get orderedActive {
+    final sorted = [..._activeTodos];
+    sorted.sort((a, b) => a.order.compareTo(b.order));
+    return sorted;
+  }
+
   List<Todo> get sortedActive {
     final sorted = [..._activeTodos];
     sorted.sort((a, b) {
@@ -71,6 +77,15 @@ class TodoRepository extends GetxService {
           return a.title.toLowerCase().compareTo(b.title.toLowerCase());
         case SortOption.recentlyAdded:
           return b.createdAt.compareTo(a.createdAt);
+        case SortOption.dueDateSoon:
+          final maxDate = DateTime.utc(9999, 12, 31);
+          final aDate = a.dueDate ?? maxDate;
+          final bDate = b.dueDate ?? maxDate;
+          final compare = aDate.compareTo(bDate);
+          if (compare != 0) return compare;
+          return a.createdAt.compareTo(b.createdAt);
+        case SortOption.manual:
+          return a.order.compareTo(b.order);
       }
     });
     return sorted;
@@ -93,7 +108,13 @@ class TodoRepository extends GetxService {
   }
 
   void addTodo(Todo todo) {
-    _todos.add(todo.copyWith(isDeleted: false, deletedAt: null));
+    final nextOrder =
+        _todos.isEmpty ? 0 : (_todos.map((t) => t.order).reduce((a, b) => a > b ? a : b) + 1);
+    _todos.add(todo.copyWith(
+      isDeleted: false,
+      deletedAt: null,
+      order: todo.order == 0 ? nextOrder : todo.order,
+    ));
     _saveTodos();
   }
 
@@ -195,14 +216,36 @@ class TodoRepository extends GetxService {
     _saveSortOption();
   }
 
+  void moveTodo(int oldIndex, int newIndex) {
+    if (_sortOption.value != SortOption.manual) return;
+    final active = orderedActive;
+    final item = active.removeAt(oldIndex);
+    active.insert(newIndex, item);
+    for (var i = 0; i < active.length; i++) {
+      active[i] = active[i].copyWith(order: i);
+      final idx = _todos.indexWhere((t) => t.id == active[i].id);
+      if (idx != -1) _todos[idx] = active[i];
+    }
+    _todos.refresh();
+    _saveTodos();
+  }
+
   List<Todo> _normalized(List<Todo> todos) {
     return todos
+        .asMap()
+        .entries
         .map(
-          (todo) => todo.copyWith(
-            isCompleted: todo.isCompleted ||
-                (todo.subtasks.isNotEmpty &&
-                    todo.subtasks.every((sub) => sub.isDone)),
-          ),
+          (entry) {
+            final todo = entry.value;
+            final normalizedOrder =
+                todo.order == 0 ? entry.key : todo.order;
+            return todo.copyWith(
+              isCompleted: todo.isCompleted ||
+                  (todo.subtasks.isNotEmpty &&
+                      todo.subtasks.every((sub) => sub.isDone)),
+              order: normalizedOrder,
+            );
+          },
         )
         .toList();
   }

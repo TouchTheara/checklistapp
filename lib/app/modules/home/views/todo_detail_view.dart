@@ -61,6 +61,35 @@ class TodoDetailView extends GetView<HomeController> {
                   children: [
                     Text(todo.title.isEmpty ? 'Untitled task' : todo.title,
                         style: theme.textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        Chip(
+                          avatar: const Icon(Icons.flag_outlined, size: 18),
+                          label: Text(todo.priority.label),
+                        ),
+                        if (todo.dueDate != null)
+                          Chip(
+                            avatar: const Icon(Icons.event, size: 18),
+                            label: Text(
+                                'Due ${_formatDate(todo.dueDate!)}'),
+                          ),
+                        if (todo.reminderAt != null)
+                          Chip(
+                            avatar: const Icon(Icons.alarm, size: 18),
+                            label: Text(
+                                'Reminder ${_formatDate(todo.reminderAt!)}'),
+                          ),
+                        if (todo.category != null &&
+                            todo.category!.isNotEmpty)
+                          Chip(
+                            avatar: const Icon(Icons.folder_open, size: 18),
+                            label: Text(todo.category!),
+                          ),
+                      ],
+                    ),
                     if (todo.description != null &&
                         todo.description!.trim().isNotEmpty)
                       Padding(
@@ -140,5 +169,9 @@ class TodoDetailView extends GetView<HomeController> {
     if (title != null && title.isNotEmpty) {
       controller.addSubtask(todoId, SubTask(title: title));
     }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }

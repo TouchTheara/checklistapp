@@ -33,6 +33,8 @@ enum SortOption {
   priorityLowFirst,
   alphabetical,
   recentlyAdded,
+  dueDateSoon,
+  manual,
 }
 
 extension SortOptionX on SortOption {
@@ -46,6 +48,10 @@ extension SortOptionX on SortOption {
         return 'Alphabetical';
       case SortOption.recentlyAdded:
         return 'Recently Added';
+      case SortOption.dueDateSoon:
+        return 'Due date (Soonest first)';
+      case SortOption.manual:
+        return 'Custom order';
     }
   }
 }
@@ -56,6 +62,11 @@ class Todo {
     required this.title,
     this.description,
     this.priority = TodoPriority.medium,
+    this.dueDate,
+    this.reminderAt,
+    this.category,
+    List<String>? attachments,
+    int? order,
     this.isCompleted = false,
     DateTime? createdAt,
     this.isDeleted = false,
@@ -64,18 +75,27 @@ class Todo {
     List<SubTask>? subtasks,
   })  : id = id ?? _uuid.v4(),
         createdAt = createdAt ?? DateTime.now(),
+        order = order ?? DateTime.now().microsecondsSinceEpoch,
+        attachments = List.unmodifiable(attachments ?? const []),
         subtasks = List.unmodifiable(subtasks ?? const []);
 
   factory Todo.create({
     required String title,
     String? description,
     TodoPriority priority = TodoPriority.medium,
+    DateTime? dueDate,
+    DateTime? reminderAt,
+    String? category,
+    List<String>? attachments,
     List<SubTask>? subtasks,
   }) {
     return Todo(
       title: title.trim(),
       description: description?.trim(),
       priority: priority,
+      dueDate: dueDate,
+      category: category?.trim().isEmpty == true ? null : category?.trim(),
+      attachments: attachments,
       subtasks: subtasks,
     );
   }
@@ -84,24 +104,34 @@ class Todo {
   final String title;
   final String? description;
   final TodoPriority priority;
+  final DateTime? dueDate;
+  final DateTime? reminderAt;
+  final String? category;
+  final List<String> attachments;
   final bool isCompleted;
   final DateTime createdAt;
+  final int order;
   final bool isDeleted;
   final DateTime? deletedAt;
   final DateTime? updatedAt;
   final List<SubTask> subtasks;
 
   int get totalSubtasks => subtasks.length;
-  int get completedSubtasks =>
-      subtasks.where((sub) => sub.isDone).length;
-  double get progress =>
-      totalSubtasks == 0 ? (isCompleted ? 1 : 0) : completedSubtasks / totalSubtasks;
+  int get completedSubtasks => subtasks.where((sub) => sub.isDone).length;
+  double get progress => totalSubtasks == 0
+      ? (isCompleted ? 1 : 0)
+      : completedSubtasks / totalSubtasks;
 
   Todo copyWith({
     String? id,
     String? title,
     String? description,
     TodoPriority? priority,
+    DateTime? dueDate,
+    DateTime? reminderAt,
+    String? category,
+    List<String>? attachments,
+    int? order,
     bool? isCompleted,
     DateTime? createdAt,
     bool? isDeleted,
@@ -114,6 +144,11 @@ class Todo {
       title: title ?? this.title,
       description: description ?? this.description,
       priority: priority ?? this.priority,
+      dueDate: dueDate ?? this.dueDate,
+      reminderAt: reminderAt ?? this.reminderAt,
+      category: category ?? this.category,
+      attachments: attachments ?? this.attachments,
+      order: order ?? this.order,
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       isDeleted: isDeleted ?? this.isDeleted,
@@ -131,6 +166,11 @@ class Todo {
       'title': title,
       'description': description,
       'priority': priority.name,
+      'dueDate': dueDate?.toIso8601String(),
+      'reminderAt': reminderAt?.toIso8601String(),
+      'category': category,
+      'attachments': attachments,
+      'order': order,
       'isCompleted': isCompleted,
       'createdAt': createdAt.toIso8601String(),
       'isDeleted': isDeleted,
@@ -154,6 +194,17 @@ class Todo {
         (p) => p.name == json['priority'],
         orElse: () => TodoPriority.medium,
       ),
+      dueDate: json['dueDate'] != null
+          ? DateTime.tryParse(json['dueDate'] as String)
+          : null,
+      category: json['category'] as String?,
+      attachments:
+          (json['attachments'] as List?)?.map((e) => e.toString()).toList() ??
+              const [],
+      order: json['order'] as int?,
+      reminderAt: json['reminderAt'] != null
+          ? DateTime.tryParse(json['reminderAt'] as String)
+          : null,
       isCompleted: isCompleted,
       createdAt: DateTime.parse(json['createdAt'] as String),
       isDeleted: json['isDeleted'] as bool? ?? false,

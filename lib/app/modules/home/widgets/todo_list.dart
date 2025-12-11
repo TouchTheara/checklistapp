@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../data/models/todo.dart';
-import '../views/todo_detail_view.dart';
+import '../../../routes/app_routes.dart';
 
 class TodoListView extends StatelessWidget {
   const TodoListView({
@@ -45,7 +45,10 @@ class TodoListView extends StatelessWidget {
           onToggle: () => onToggle(todo.id),
           onDelete: () => onDelete(todo.id),
           onEdit: () => onEdit(todo),
-          onOpenDetail: () => Get.to(() => TodoDetailView(todoId: todo.id)),
+          onOpenDetail: () => Get.toNamed(
+            Routes.todoDetail,
+            arguments: todo.id,
+          ),
           isDashboard: isDashboard,
         );
       },
@@ -231,6 +234,36 @@ class TodoCard extends StatelessWidget {
                   ),
                 ],
               ),
+              if ((todo.dueDate != null) ||
+                  (todo.category != null && todo.category!.isNotEmpty))
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, left: 8, right: 8),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      if (todo.dueDate != null)
+                        Chip(
+                          visualDensity: VisualDensity.compact,
+                          avatar: const Icon(Icons.event, size: 18),
+                          label: Text('Due ${_formatDueDate(todo.dueDate!)}'),
+                        ),
+                      if (todo.reminderAt != null)
+                        Chip(
+                          visualDensity: VisualDensity.compact,
+                          avatar: const Icon(Icons.alarm, size: 18),
+                          label: Text('Reminds ${_formatDueDate(todo.reminderAt!)}'),
+                        ),
+                      if (todo.category != null &&
+                          todo.category!.isNotEmpty)
+                        Chip(
+                          visualDensity: VisualDensity.compact,
+                          avatar: const Icon(Icons.folder_open, size: 18),
+                          label: Text(todo.category!),
+                        ),
+                    ],
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Row(
@@ -312,6 +345,17 @@ class TodoCard extends StatelessWidget {
       return '${difference.inHours}h ago';
     }
     return '${difference.inDays}d ago';
+  }
+
+  String _formatDueDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(date.year, date.month, date.day);
+    final diff = target.difference(today).inDays;
+    if (diff == 0) return 'today';
+    if (diff == 1) return 'tomorrow';
+    if (diff < 0) return '${diff.abs()}d ago';
+    return '${target.year}-${target.month.toString().padLeft(2, '0')}-${target.day.toString().padLeft(2, '0')}';
   }
 }
 

@@ -9,10 +9,10 @@ import 'app/data/services/locale_service.dart';
 import 'app/data/services/onboarding_service.dart';
 import 'app/data/services/theme_service.dart';
 import 'app/i18n/app_translations.dart';
-import 'app/modules/auth/views/auth_view.dart';
-import 'app/modules/onboarding/views/onboarding_view.dart';
-import 'app/modules/home/bindings/home_binding.dart';
+import 'app/routes/app_pages.dart';
+import 'app/routes/app_routes.dart';
 import 'app/modules/home/views/home_view.dart';
+import 'app/modules/home/bindings/home_binding.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,8 +22,6 @@ void main() async {
   await Get.putAsync<OnboardingService>(() => OnboardingService().init());
   await Get.putAsync<LocaleService>(() => LocaleService().init());
   await Get.putAsync<AuthService>(() => AuthService().init());
-  // Pre-register home-related controllers so navigation always finds them.
-  HomeBinding().dependencies();
   Get.put<AppController>(
     AppController(
       Get.find<ThemeService>(),
@@ -59,15 +57,16 @@ class ChecklistApp extends StatelessWidget {
             brightness: Brightness.dark,
           ),
           useMaterial3: true,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
         themeMode: appController.themeMode,
-        initialBinding: HomeBinding(),
-        home: appController.showOnboarding
-            ? const OnboardingView()
-            : appController.isLoggedIn
-                ? const HomeView()
-                : const AuthView(),
+        initialRoute: AppPages.initialRoute(appController),
+        getPages: AppPages.pages,
+        unknownRoute: GetPage(
+          name: Routes.home,
+          page: () => const HomeView(),
+          binding: HomeBinding(),
+        ),
       ),
     );
   }

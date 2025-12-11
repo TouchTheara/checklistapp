@@ -74,7 +74,6 @@ class HomeView extends GetView<HomeController> {
         appBar: AppBar(
           title: Text(titles[tabIndex]),
           actions: [
-            if (tabIndex == 0) const _SortMenu(),
             if (tabIndex == 2)
               Obx(
                 () {
@@ -143,23 +142,6 @@ class _SortMenu extends GetView<DashboardController> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      () => PopupMenuButton<SortOption>(
-        tooltip: 'action.sort'.tr,
-        icon: const Icon(Icons.sort),
-        initialValue: controller.sortOption,
-        onSelected: controller.changeSort,
-        itemBuilder: (_) {
-          return SortOption.values
-              .map(
-                (option) => PopupMenuItem<SortOption>(
-                  value: option,
-                  child: Text(option.label),
-                ),
-              )
-              .toList();
-        },
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }

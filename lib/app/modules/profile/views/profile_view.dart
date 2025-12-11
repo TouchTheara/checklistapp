@@ -9,9 +9,7 @@ import '../../../controllers/app_controller.dart';
 import '../../../data/models/profile.dart';
 import '../../../widgets/app_text_field.dart';
 import '../controllers/profile_controller.dart';
-import '../../support/views/support_view.dart';
-import '../../auth/views/auth_view.dart';
-import '../../legal/views/terms_privacy_view.dart';
+import '../../../routes/app_routes.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
@@ -132,7 +130,7 @@ class ProfileView extends GetView<ProfileController> {
               leading: const Icon(Icons.help_outline),
               title: Text('profile.help'.tr),
               subtitle: Text('support.faq.desc'.tr),
-              onTap: () => Get.to(() => const SupportView()),
+              onTap: () => Get.toNamed(Routes.support),
             ),
           ),
           const SizedBox(height: 8),
@@ -154,7 +152,7 @@ class ProfileView extends GetView<ProfileController> {
               leading: const Icon(Icons.article_outlined),
               title: Text('terms.privacy'.tr),
               subtitle: Text('terms.description'.tr),
-              onTap: () => Get.to(() => const TermsPrivacyView()),
+              onTap: () => Get.toNamed(Routes.terms),
             ),
           ),
           const SizedBox(height: 8),
@@ -164,7 +162,7 @@ class ProfileView extends GetView<ProfileController> {
               title: const Text('Sign out'),
               onTap: () async {
                 await appController.logout();
-                Get.offAll(() => const AuthView());
+                Get.offAllNamed(Routes.auth);
               },
             ),
           ),

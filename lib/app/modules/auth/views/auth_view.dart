@@ -4,8 +4,7 @@ import 'package:get/get.dart';
 import '../../../controllers/app_controller.dart';
 import '../../../widgets/app_text_field.dart';
 import '../../auth/controllers/auth_controller.dart';
-import '../../home/views/home_view.dart';
-import '../../legal/views/terms_privacy_view.dart';
+import '../../../routes/app_routes.dart';
 
 class AuthView extends StatefulWidget {
   const AuthView({super.key});
@@ -57,7 +56,7 @@ class _AuthViewState extends State<AuthView>
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: OutlinedButton.icon(
-            onPressed: () => Get.to(() => const TermsPrivacyView()),
+            onPressed: () => Get.toNamed(Routes.terms),
             icon: const Icon(Icons.article_outlined),
             label: Text('terms.privacy'.tr),
             style: OutlinedButton.styleFrom(
@@ -106,7 +105,7 @@ class _LoginFormState extends State<_LoginForm> {
       );
       return;
     }
-    Get.offAll(() => const HomeView());
+    Get.offAllNamed(Routes.home);
   }
 
   @override
@@ -203,7 +202,7 @@ class _RegisterFormState extends State<_RegisterForm> {
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
-    Get.offAll(() => const HomeView());
+    Get.offAllNamed(Routes.home);
   }
 
   @override

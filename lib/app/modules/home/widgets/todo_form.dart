@@ -28,6 +28,9 @@ class _TodoFormState extends State<TodoForm> {
   late final TextEditingController _descriptionController;
   late TodoPriority _priority;
   final TextEditingController _subtaskController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
+  DateTime? _dueDate;
+  DateTime? _reminderAt;
   late List<SubTask> _subtasks;
 
   @override
@@ -37,6 +40,9 @@ class _TodoFormState extends State<TodoForm> {
     _descriptionController =
         TextEditingController(text: widget.existing?.description);
     _priority = widget.existing?.priority ?? TodoPriority.medium;
+    _categoryController.text = widget.existing?.category ?? '';
+    _dueDate = widget.existing?.dueDate;
+    _reminderAt = widget.existing?.reminderAt;
     _subtasks = widget.existing?.subtasks.toList() ?? [];
   }
 
@@ -45,6 +51,7 @@ class _TodoFormState extends State<TodoForm> {
     _titleController.dispose();
     _descriptionController.dispose();
     _subtaskController.dispose();
+    _categoryController.dispose();
     super.dispose();
   }
 
@@ -57,18 +64,27 @@ class _TodoFormState extends State<TodoForm> {
     final description = _descriptionController.text.trim().isEmpty
         ? null
         : _descriptionController.text.trim();
+    final category = _categoryController.text.trim().isEmpty
+        ? null
+        : _categoryController.text.trim();
 
     final todo = widget.existing == null
         ? Todo.create(
             title: title,
             description: description,
             priority: _priority,
+            category: category,
+            dueDate: _dueDate,
+            reminderAt: _reminderAt,
             subtasks: _subtasks,
           )
         : widget.existing!.copyWith(
             title: title,
             description: description,
             priority: _priority,
+            category: category,
+            dueDate: _dueDate,
+            reminderAt: _reminderAt,
             subtasks: _subtasks,
           );
 
@@ -125,11 +141,59 @@ class _TodoFormState extends State<TodoForm> {
     }
   }
 
+  Future<void> _pickDueDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dueDate ?? now,
+      firstDate: now.subtract(const Duration(days: 365)),
+      lastDate: now.add(const Duration(days: 365 * 5)),
+    );
+    if (picked != null) {
+      setState(() => _dueDate = picked);
+    }
+  }
+
+  Future<void> _pickReminder() async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _reminderAt ?? _dueDate ?? now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365 * 2)),
+    );
+    if (date == null) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_reminderAt ?? now),
+    );
+    if (time == null) return;
+    final combined = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    setState(() => _reminderAt = combined);
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final categories = Get.find<TodoRepository>()
+        .rawTodos
+        .map((t) => t.category)
+        .whereType<String>()
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -205,6 +269,81 @@ class _TodoFormState extends State<TodoForm> {
                     textCapitalization: TextCapitalization.sentences,
                   ),
                   const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.event_outlined),
+                          title: Text(
+                            _dueDate == null
+                                ? 'No due date'
+                                : 'Due ${_formatDate(_dueDate!)}',
+                          ),
+                          onTap: _pickDueDate,
+                          trailing: TextButton(
+                            onPressed: _pickDueDate,
+                            child: const Text('Pick date'),
+                          ),
+                        ),
+                      ),
+                      if (_dueDate != null)
+                        IconButton(
+                          tooltip: 'Clear',
+                          onPressed: () => setState(() => _dueDate = null),
+                          icon: const Icon(Icons.close),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  AppTextField(
+                    controller: _categoryController,
+                    label: 'Category (optional)',
+                    hintText: 'e.g. Safety, Quality, Personal',
+                    prefixIcon: const Icon(Icons.folder_open),
+                    textInputAction: TextInputAction.next,
+                  ),
+                  if (categories.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: categories
+                          .take(6)
+                          .map(
+                            (c) => ActionChip(
+                              label: Text(c),
+                              avatar: const Icon(Icons.label_outline, size: 16),
+                              onPressed: () =>
+                                  setState(() => _categoryController.text = c),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.alarm),
+                    title: Text(_reminderAt == null
+                        ? 'No reminder'
+                        : 'Reminder ${_formatDate(_reminderAt!)}'),
+                    trailing: TextButton(
+                      onPressed: _pickReminder,
+                      child: const Text('Set reminder'),
+                    ),
+                    onTap: _pickReminder,
+                  ),
+                  if (_reminderAt != null)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () => setState(() => _reminderAt = null),
+                        icon: const Icon(Icons.close),
+                        label: const Text('Clear reminder'),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
                   DropdownButtonFormField<TodoPriority>(
                     key: TodoForm.priorityFieldKey,
                     initialValue: _priority,
