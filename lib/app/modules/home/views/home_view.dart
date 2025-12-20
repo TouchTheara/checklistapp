@@ -63,6 +63,11 @@ class HomeView extends GetView<HomeController> {
   Widget build(BuildContext context) {
     final binController = Get.find<BinController>();
     return Obx(() {
+      if (controller.isLoading) {
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
       final tabIndex = controller.tabIndex;
       final titles = <String>[
         'tab.dashboard'.tr,
@@ -70,34 +75,48 @@ class HomeView extends GetView<HomeController> {
         'tab.archive'.tr,
         'tab.profile'.tr,
       ];
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(titles[tabIndex]),
-          actions: [
-            if (tabIndex == 2)
-              Obx(
-                () {
-                  final hasBinItems = binController.hasBinItems;
-                  return TextButton.icon(
-                    onPressed: hasBinItems
-                        ? () => _confirmEmptyBin(context, binController)
-                        : null,
-                    icon: const Icon(Icons.delete_sweep_outlined),
-                    label: Text('action.emptyArchive'.tr),
-                  );
-                },
-              ),
-          ],
-        ),
-        floatingActionButton: tabIndex == 0
-            ? FloatingActionButton.extended(
-                key: addTodoFabKey,
-                onPressed: () => _openTodoForm(context),
-                icon: const Icon(Icons.add),
-                label: Text('action.addTask'.tr),
-              )
-            : null,
-        body: IndexedStack(
+      return _buildScaffold(context, tabIndex, titles, binController);
+    });
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    int tabIndex,
+    List<String> titles,
+    BinController binController,
+  ) {
+    final hideAppBar = tabIndex == 0 || tabIndex == 3;
+    return Scaffold(
+      appBar: hideAppBar
+          ? null
+          : AppBar(
+              title: Text(titles[tabIndex]),
+              actions: [
+                if (tabIndex == 2)
+                  Obx(
+                    () {
+                      final hasBinItems = binController.hasBinItems;
+                      return TextButton.icon(
+                        onPressed: hasBinItems
+                            ? () => _confirmEmptyBin(context, binController)
+                            : null,
+                        icon: const Icon(Icons.delete_sweep_outlined),
+                        label: Text('action.emptyArchive'.tr),
+                      );
+                    },
+                  ),
+              ],
+            ),
+      floatingActionButton: tabIndex == 0
+          ? FloatingActionButton.extended(
+              key: addTodoFabKey,
+              onPressed: () => _openTodoForm(context),
+              icon: const Icon(Icons.add),
+              label: Text('action.addTask'.tr),
+            )
+          : null,
+      body: SafeArea(
+        child: IndexedStack(
           index: tabIndex,
           children: [
             DashboardView(onOpenForm: _openTodoForm),
@@ -106,34 +125,34 @@ class HomeView extends GetView<HomeController> {
             const ProfileView(),
           ],
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: tabIndex,
-          onDestinationSelected: controller.changeTab,
-          destinations: [
-            NavigationDestination(
-              icon: const Icon(Icons.fact_check_outlined),
-              selectedIcon: const Icon(Icons.fact_check),
-              label: 'nav.checks'.tr,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.done_all_outlined),
-              selectedIcon: const Icon(Icons.done_all),
-              label: 'nav.completed'.tr,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.delete_outline),
-              selectedIcon: const Icon(Icons.delete),
-              label: 'nav.archive'.tr,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.person_outline),
-              selectedIcon: const Icon(Icons.person),
-              label: 'nav.profile'.tr,
-            ),
-          ],
-        ),
-      );
-    });
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: tabIndex,
+        onDestinationSelected: controller.changeTab,
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.fact_check_outlined),
+            selectedIcon: const Icon(Icons.fact_check),
+            label: 'nav.checks'.tr,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.done_all_outlined),
+            selectedIcon: const Icon(Icons.done_all),
+            label: 'nav.completed'.tr,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.delete_outline),
+            selectedIcon: const Icon(Icons.delete),
+            label: 'nav.archive'.tr,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: 'nav.profile'.tr,
+          ),
+        ],
+      ),
+    );
   }
 }
 

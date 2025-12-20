@@ -268,7 +268,7 @@ class _RegisterFormState extends State<_RegisterForm> {
                         width: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Register'),
+                    : Text('auth.register'.tr),
               ),
             ),
           ],

@@ -35,6 +35,7 @@ class AppController extends GetxController {
 
   ThemeMode get themeMode => _themeMode.value;
   bool get showOnboarding => !_onboardingComplete.value;
+  bool get needsLocaleSelection => !_localeService.hasSavedLocale;
   Locale get locale => _locale.value;
   bool get isLoggedIn => _loggedIn.value;
   String? get userName => _userName.value.isEmpty ? null : _userName.value;

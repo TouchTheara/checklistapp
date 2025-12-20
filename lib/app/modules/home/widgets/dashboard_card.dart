@@ -73,7 +73,7 @@ class _CompletionInsight extends StatelessWidget {
     final percentage = (rate * 100).toStringAsFixed(0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      children: [
         Text(
           'dashboard.completion'.tr,
           style: theme.textTheme.labelLarge,

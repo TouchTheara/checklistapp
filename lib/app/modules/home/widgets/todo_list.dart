@@ -169,9 +169,9 @@ class TodoCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Checkbox(
+                  _AnimatedCheckButton(
                     value: todo.isCompleted,
-                    onChanged: (_) => onToggle(),
+                    onChanged: onToggle,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -252,10 +252,10 @@ class TodoCard extends StatelessWidget {
                         Chip(
                           visualDensity: VisualDensity.compact,
                           avatar: const Icon(Icons.alarm, size: 18),
-                          label: Text('Reminds ${_formatDueDate(todo.reminderAt!)}'),
+                          label: Text(
+                              'Reminds ${_formatDueDate(todo.reminderAt!)}'),
                         ),
-                      if (todo.category != null &&
-                          todo.category!.isNotEmpty)
+                      if (todo.category != null && todo.category!.isNotEmpty)
                         Chip(
                           visualDensity: VisualDensity.compact,
                           avatar: const Icon(Icons.folder_open, size: 18),
@@ -387,16 +387,16 @@ class _EmptyState extends StatelessWidget {
               color: theme.colorScheme.primary,
             ),
             const SizedBox(height: 16),
-          Text(
-            title.tr,
-            style: theme.textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description.tr,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium,
-          ),
+            Text(
+              title.tr,
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description.tr,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium,
+            ),
           ],
         ),
       ),
@@ -407,4 +407,122 @@ class _EmptyState extends StatelessWidget {
 enum _TodoAction {
   edit,
   delete,
+}
+
+class _AnimatedCheckButton extends StatefulWidget {
+  const _AnimatedCheckButton({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final VoidCallback onChanged;
+
+  @override
+  State<_AnimatedCheckButton> createState() => _AnimatedCheckButtonState();
+}
+
+class _AnimatedCheckButtonState extends State<_AnimatedCheckButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  bool _pending = false;
+  late bool _localValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _localValue = widget.value;
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      lowerBound: 0.9,
+      upperBound: 1.0,
+    );
+    _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
+    if (_localValue) {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedCheckButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value) {
+      _localValue = widget.value;
+      _playAnimation();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final checked = _localValue;
+    final checkedColor = theme.colorScheme.primary;
+    final uncheckedColor = theme.colorScheme.surfaceContainerHighest;
+    return Padding(
+      padding: EdgeInsets.only(top: 1.5),
+      child: GestureDetector(
+        onTap: _pending
+            ? null
+            : () async {
+                setState(() {
+                  _pending = true;
+                  _localValue = !_localValue;
+                });
+                _playAnimation();
+                await Future.delayed(const Duration(milliseconds: 300));
+                if (mounted) widget.onChanged();
+                if (mounted) setState(() => _pending = false);
+              },
+        child: ScaleTransition(
+          scale: _scale,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            height: 24,
+            width: 24,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: checked ? checkedColor : uncheckedColor,
+              border: Border.all(
+                color: checked
+                    ? checkedColor.withValues(alpha: 0.2)
+                    : theme.colorScheme.outline,
+                width: 1.2,
+              ),
+            ),
+            child: AnimatedScale(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+              scale: checked ? 1 : 0.7,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 160),
+                opacity: checked ? 1 : 0,
+                child: Icon(
+                  Icons.check,
+                  size: 18,
+                  color: theme.colorScheme.onPrimary,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _playAnimation() {
+    if (_localValue) {
+      _controller.forward(from: 0.9);
+    } else {
+      _controller.reverse(from: 1.0);
+    }
+  }
 }

@@ -16,8 +16,10 @@ class HomeController extends GetxController {
 
   final TodoRepository _repository;
   final RxInt _tabIndex = 0.obs;
+  final RxBool _loading = true.obs;
 
   int get tabIndex => _tabIndex.value;
+  bool get isLoading => _loading.value;
   List<Todo> get todos => _repository.rawTodos;
   List<Todo> get doneTodos => _repository.sortedDone;
   List<Todo> get binTodos => _repository.sortedBin;
@@ -32,6 +34,15 @@ class HomeController extends GetxController {
   void changeTab(int index) {
     if (index == _tabIndex.value) return;
     _tabIndex.value = index;
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (_loading.isFalse) return;
+      _loading.value = false;
+    });
   }
 
   void addTodo(Todo todo) => _repository.addTodo(todo);

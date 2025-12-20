@@ -230,8 +230,8 @@ class _TodoFormState extends State<TodoForm> {
                       Expanded(
                         child: Text(
                           widget.existing == null
-                              ? 'New checklist item'
-                              : 'Edit item',
+                              ? 'todo.new.title'.tr
+                              : 'todo.edit.title'.tr,
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -277,13 +277,15 @@ class _TodoFormState extends State<TodoForm> {
                           leading: const Icon(Icons.event_outlined),
                           title: Text(
                             _dueDate == null
-                                ? 'No due date'
-                                : 'Due ${_formatDate(_dueDate!)}',
+                                ? 'todo.due.none'.tr
+                                : 'todo.due.label'.trParams(
+                                    {'date': _formatDate(_dueDate!)},
+                                  ),
                           ),
                           onTap: _pickDueDate,
                           trailing: TextButton(
                             onPressed: _pickDueDate,
-                            child: const Text('Pick date'),
+                            child: Text('todo.due.pick'.tr),
                           ),
                         ),
                       ),
@@ -298,8 +300,8 @@ class _TodoFormState extends State<TodoForm> {
                   const SizedBox(height: 8),
                   AppTextField(
                     controller: _categoryController,
-                    label: 'Category (optional)',
-                    hintText: 'e.g. Safety, Quality, Personal',
+                    label: 'todo.category.label'.tr,
+                    hintText: 'todo.category.hint'.tr,
                     prefixIcon: const Icon(Icons.folder_open),
                     textInputAction: TextInputAction.next,
                   ),
@@ -326,11 +328,12 @@ class _TodoFormState extends State<TodoForm> {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.alarm),
                     title: Text(_reminderAt == null
-                        ? 'No reminder'
-                        : 'Reminder ${_formatDate(_reminderAt!)}'),
+                        ? 'todo.reminder.none'.tr
+                        : 'todo.reminder.label'
+                            .trParams({'date': _formatDate(_reminderAt!)})),
                     trailing: TextButton(
                       onPressed: _pickReminder,
-                      child: const Text('Set reminder'),
+                      child: Text('todo.reminder.set'.tr),
                     ),
                     onTap: _pickReminder,
                   ),
@@ -340,7 +343,7 @@ class _TodoFormState extends State<TodoForm> {
                       child: TextButton.icon(
                         onPressed: () => setState(() => _reminderAt = null),
                         icon: const Icon(Icons.close),
-                        label: const Text('Clear reminder'),
+                        label: Text('todo.reminder.clear'.tr),
                       ),
                     ),
                   const SizedBox(height: 12),
@@ -405,7 +408,7 @@ class _TodoFormState extends State<TodoForm> {
                   ),
                   const SizedBox(height: 32),
                   Text(
-                    'Sub-tasks (optional)',
+                    'todo.subtasks'.tr,
                     style: theme.textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
@@ -414,8 +417,8 @@ class _TodoFormState extends State<TodoForm> {
                       Expanded(
                         child: TextField(
                           controller: _subtaskController,
-                          decoration: const InputDecoration(
-                            hintText: 'Add a sub-task',
+                          decoration: InputDecoration(
+                            hintText: 'todo.subtasks.hint'.tr,
                           ),
                           onSubmitted: (_) => _addSubtask(),
                         ),
@@ -424,14 +427,14 @@ class _TodoFormState extends State<TodoForm> {
                       FilledButton.icon(
                         onPressed: _addSubtask,
                         icon: const Icon(Icons.add),
-                        label: const Text('Add'),
+                        label: Text('todo.subtasks.add'.tr),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   if (_subtasks.isEmpty)
                     Text(
-                      'No sub-tasks added.',
+                      'todo.subtasks.empty'.tr,
                       style: theme.textTheme.bodyMedium,
                     )
                   else
@@ -445,7 +448,9 @@ class _TodoFormState extends State<TodoForm> {
                                 onChanged: (_) => _toggleSubtask(sub.id),
                               ),
                               title: Text(
-                                sub.title.isEmpty ? 'Untitled' : sub.title,
+                                sub.title.isEmpty
+                                    ? 'todo.subtasks.untitled'.tr
+                                    : sub.title,
                                 style: theme.textTheme.bodyMedium,
                               ),
                               trailing: IconButton(
@@ -471,7 +476,7 @@ class _TodoFormState extends State<TodoForm> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text('Cancel'),
+                        child: Text('form.cancel'.tr),
                       ),
                       const SizedBox(width: 12),
                       FilledButton(
@@ -494,7 +499,9 @@ class _TodoFormState extends State<TodoForm> {
                               size: 20,
                             ),
                             const SizedBox(width: 8),
-                            Text(widget.existing == null ? 'Create' : 'Save'),
+                            Text(widget.existing == null
+                                ? 'form.create'.tr
+                                : 'form.save'.tr),
                           ],
                         ),
                       ),

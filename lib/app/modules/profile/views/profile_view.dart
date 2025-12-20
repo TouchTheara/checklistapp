@@ -330,14 +330,14 @@ void _showLanguageSheet(BuildContext context, AppController appController) {
 }
 
 Future<void> _showImageSourceSheet(BuildContext context) async {
-  if (!GetPlatform.isAndroid && !GetPlatform.isIOS) {
-    Get.snackbar(
-      'profile.edit'.tr,
-      'profile.photo.unsupported'.tr,
-      snackPosition: SnackPosition.BOTTOM,
-    );
-    return;
-  }
+  // if (!GetPlatform.isAndroid && !GetPlatform.isIOS) {
+  //   Get.snackbar(
+  //     'profile.edit'.tr,
+  //     'profile.photo.unsupported'.tr,
+  //     snackPosition: SnackPosition.BOTTOM,
+  //   );
+  //   return;
+  // }
 
   final source = await showModalBottomSheet<ImageSource>(
     context: context,

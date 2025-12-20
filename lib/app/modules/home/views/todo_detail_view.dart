@@ -48,7 +48,7 @@ class TodoDetailView extends GetView<HomeController> {
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => _addSubtask(context),
           icon: const Icon(Icons.add_task),
-          label: const Text('Add sub-task'),
+          label: Text('todo.subtasks.add'.tr),
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
@@ -117,11 +117,11 @@ class TodoDetailView extends GetView<HomeController> {
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            if (todo.subtasks.isEmpty)
-              Text(
-                'No sub-tasks yet. Add checks to track progress.',
-                style: theme.textTheme.bodyMedium,
-              )
+                    if (todo.subtasks.isEmpty)
+                      Text(
+                        'todo.subtasks.empty'.tr,
+                        style: theme.textTheme.bodyMedium,
+                      )
             else
               ...todo.subtasks.map(
                 (sub) => Card(
@@ -144,11 +144,11 @@ class TodoDetailView extends GetView<HomeController> {
     final title = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add sub-task'),
+        title: Text('todo.subtasks.add'.tr),
         content: TextField(
           controller: textController,
-          decoration: const InputDecoration(
-            hintText: 'Sub-task title',
+          decoration: InputDecoration(
+            hintText: 'todo.subtasks.hint'.tr,
           ),
           autofocus: true,
           textInputAction: TextInputAction.done,
@@ -156,12 +156,12 @@ class TodoDetailView extends GetView<HomeController> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text('form.cancel'.tr),
           ),
           FilledButton(
             onPressed: () =>
                 Navigator.of(ctx).pop(textController.text.trim()),
-            child: const Text('Add'),
+            child: Text('form.save'.tr),
           ),
         ],
       ),

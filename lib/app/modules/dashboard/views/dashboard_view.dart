@@ -22,48 +22,70 @@ class DashboardView extends GetView<DashboardController> {
       final canReorder = controller.sortOption == SortOption.manual &&
           !controller.urgentOnly &&
           controller.categories.isNotEmpty;
-      return Column(
-        children: [
-          _FilterBar(controller: controller),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: DashboardCard(
-              total: controller.totalCount,
-              completed: controller.completedCount,
-              rate: controller.completionRate,
-              priorityBreakdown: controller.priorityBreakdown,
+      return CustomScrollView(
+        slivers: [
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _FilterHeader(
+              child: _FilterBar(controller: controller),
             ),
           ),
-          Expanded(
-            child: canReorder
-                ? ReorderableListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                    itemCount: todos.length,
-                    onReorder: controller.reorder,
-                    itemBuilder: (_, index) {
-                      final todo = todos[index];
-                      return TodoCard(
-                        key: ValueKey('todo_${todo.id}'),
-                        todo: todo,
-                        onToggle: () => controller.toggleCompleted(todo.id),
-                        onDelete: () => controller.deleteTodo(todo.id),
-                        onEdit: () => onOpenForm(context, existing: todo),
-                        onOpenDetail: () => Get.toNamed(
-                          Routes.todoDetail,
-                          arguments: todo.id,
-                        ),
-                        isDashboard: true,
-                      );
-                    },
-                  )
-                : TodoListView(
-                    todos: todos,
-                    onToggle: controller.toggleCompleted,
-                    onDelete: controller.deleteTodo,
-                    onEdit: (todo) => onOpenForm(context, existing: todo),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding:
+                  const EdgeInsets.only(left: 12, right: 12, bottom: 4, top: 0),
+              child: DashboardCard(
+                total: controller.totalCount,
+                completed: controller.completedCount,
+                rate: controller.completionRate,
+                priorityBreakdown: controller.priorityBreakdown,
+              ),
+            ),
+          ),
+          if (canReorder)
+            SliverReorderableList(
+              itemCount: todos.length,
+              onReorder: controller.reorder,
+              itemBuilder: (_, index) {
+                final todo = todos[index];
+                return TodoCard(
+                  key: ValueKey('todo_${todo.id}'),
+                  todo: todo,
+                  onToggle: () => controller.toggleCompleted(todo.id),
+                  onDelete: () => controller.deleteTodo(todo.id),
+                  onEdit: () => onOpenForm(context, existing: todo),
+                  onOpenDetail: () => Get.toNamed(
+                    Routes.todoDetail,
+                    arguments: todo.id,
+                  ),
+                  isDashboard: true,
+                );
+              },
+            )
+          else
+            SliverList.separated(
+              itemCount: todos.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (_, index) {
+                final todo = todos[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TodoCard(
+                    key: ValueKey('todo_${todo.id}'),
+                    todo: todo,
+                    onToggle: () => controller.toggleCompleted(todo.id),
+                    onDelete: () => controller.deleteTodo(todo.id),
+                    onEdit: () => onOpenForm(context, existing: todo),
+                    onOpenDetail: () => Get.toNamed(
+                      Routes.todoDetail,
+                      arguments: todo.id,
+                    ),
                     isDashboard: true,
                   ),
-          ),
+                );
+              },
+            ),
+          const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
         ],
       );
     });
@@ -79,35 +101,13 @@ class _FilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _openSmartAdd(context),
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('Smart add'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    foregroundColor: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                tooltip: 'Voice to task (speak or type)',
-                onPressed: () => _openSmartAdd(context, voiceMode: true),
-                icon: const Icon(Icons.mic_none),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
           TextField(
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
-              hintText: 'Search tasks',
+              hintText: 'search.tasks'.tr,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -117,24 +117,46 @@ class _FilterBar extends StatelessWidget {
             onChanged: controller.updateSearch,
           ),
           const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _openSmartAdd(context),
+                  icon: const Icon(Icons.auto_awesome),
+                  label: Text('smart.add'.tr),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    foregroundColor: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'smart.voice.tooltip'.tr,
+                onPressed: () => _openSmartAdd(context, voiceMode: true),
+                icon: const Icon(Icons.mic_none),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
                 FilterChip(
-                  label: const Text('Urgent'),
+                  label: Text('filter.urgent'.tr),
                   avatar: const Icon(Icons.priority_high, size: 18),
                   selected: controller.urgentOnly,
                   onSelected: (_) => controller.toggleUrgentOnly(),
                 ),
                 const SizedBox(width: 8),
                 PopupMenuButton<TodoPriority?>(
-                  tooltip: 'Filter priority',
+                  tooltip: 'filter.priority'.tr,
                   onSelected: controller.updatePriorityFilter,
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: null,
-                      child: Text('Any priority'),
+                      child: Text('filter.priority.any'.tr),
                     ),
                     ...TodoPriority.values.map(
                       (p) => PopupMenuItem(
@@ -144,18 +166,18 @@ class _FilterBar extends StatelessWidget {
                     ),
                   ],
                   child: Chip(
-                    label: Text('Priority'),
+                    label: Text('filter.priority'.tr),
                     avatar: const Icon(Icons.filter_alt, size: 18),
                   ),
                 ),
                 const SizedBox(width: 8),
                 PopupMenuButton<String?>(
-                  tooltip: 'Filter category',
+                  tooltip: 'filter.category'.tr,
                   onSelected: controller.updateCategoryFilter,
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: '',
-                      child: Text('Any category'),
+                      child: Text('filter.category.any'.tr),
                     ),
                     ...controller.categories.map(
                       (c) => PopupMenuItem(
@@ -165,13 +187,13 @@ class _FilterBar extends StatelessWidget {
                     ),
                   ],
                   child: Chip(
-                    label: const Text('Category'),
+                    label: Text('filter.category'.tr),
                     avatar: const Icon(Icons.folder_open, size: 18),
                   ),
                 ),
                 const SizedBox(width: 8),
                 PopupMenuButton<SortOption>(
-                  tooltip: 'Sort',
+                  tooltip: 'filter.sort'.tr,
                   onSelected: controller.changeSort,
                   initialValue: controller.sortOption,
                   itemBuilder: (_) => SortOption.values
@@ -183,7 +205,7 @@ class _FilterBar extends StatelessWidget {
                       )
                       .toList(),
                   child: Chip(
-                    label: const Text('Sort'),
+                    label: Text('filter.sort'.tr),
                     avatar: const Icon(Icons.sort, size: 18),
                   ),
                 ),
@@ -195,30 +217,31 @@ class _FilterBar extends StatelessWidget {
     );
   }
 
-  Future<void> _openSmartAdd(BuildContext context, {bool voiceMode = false}) async {
+  Future<void> _openSmartAdd(BuildContext context,
+      {bool voiceMode = false}) async {
     final controller = Get.find<DashboardController>();
     final textController = TextEditingController();
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(voiceMode ? 'Voice to task' : 'Smart add'),
+        title: Text(voiceMode ? 'smart.voice.title'.tr : 'smart.add'.tr),
         content: TextField(
           controller: textController,
           decoration: InputDecoration(
             hintText: voiceMode
-                ? 'Speak or type: "Inspect scaffolding tomorrow high priority"'
-                : 'e.g. "Buy safety gloves tomorrow high priority"',
+                ? 'smart.voice.hint'.tr
+                : 'smart.add.hint'.tr,
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text('form.cancel'.tr),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(textController.text.trim()),
-            child: const Text('Create'),
+            child: Text('form.save'.tr),
           ),
         ],
       ),
@@ -226,10 +249,37 @@ class _FilterBar extends StatelessWidget {
     if (result != null && result.isNotEmpty) {
       controller.addSmartTask(result);
       Get.snackbar(
-        'Task created',
-        'Added using smart parsing',
+        'smart.added.title'.tr,
+        'smart.added.desc'.tr,
         snackPosition: SnackPosition.BOTTOM,
       );
     }
+  }
+}
+
+class _FilterHeader extends SliverPersistentHeaderDelegate {
+  _FilterHeader({required this.child});
+
+  final Widget child;
+
+  @override
+  double get minExtent => 170;
+
+  @override
+  double get maxExtent => 180;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      elevation: overlapsContent ? 1 : 0,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _FilterHeader oldDelegate) {
+    return oldDelegate.child != child;
   }
 }
