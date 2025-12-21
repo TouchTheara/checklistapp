@@ -326,7 +326,8 @@ class TodoCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '$completed / $total sub-tasks completed',
+            'todo.subtasks.progress'
+                .trParams({'done': '$completed', 'total': '$total'}),
             style: theme.textTheme.bodySmall,
           ),
         ],

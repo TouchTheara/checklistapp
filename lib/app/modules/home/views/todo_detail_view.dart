@@ -104,7 +104,11 @@ class TodoDetailView extends GetView<HomeController> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${todo.completedSubtasks} of ${todo.totalSubtasks} sub-tasks complete',
+                      'todo.subtasks.progress'
+                          .trParams({
+                            'done': '${todo.completedSubtasks}',
+                            'total': '${todo.totalSubtasks}',
+                          }),
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
