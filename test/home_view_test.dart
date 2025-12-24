@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
-import 'package:checklistapp/app/data/models/todo.dart';
-import 'package:checklistapp/app/i18n/app_translations.dart';
-import 'package:checklistapp/app/modules/home/views/home_view.dart';
+import 'package:safelist/app/data/models/todo.dart';
+import 'package:safelist/app/i18n/app_translations.dart';
+import 'package:safelist/app/modules/home/views/home_view.dart';
 
 import 'helpers/test_setup.dart';
 

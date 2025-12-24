@@ -170,6 +170,7 @@ class TodoCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _AnimatedCheckButton(
+                    semanticsLabel: 'toggle_${todo.title}',
                     value: todo.isCompleted,
                     onChanged: onToggle,
                   ),
@@ -414,10 +415,12 @@ class _AnimatedCheckButton extends StatefulWidget {
   const _AnimatedCheckButton({
     required this.value,
     required this.onChanged,
+    this.semanticsLabel,
   });
 
   final bool value;
   final VoidCallback onChanged;
+  final String? semanticsLabel;
 
   @override
   State<_AnimatedCheckButton> createState() => _AnimatedCheckButtonState();
@@ -469,47 +472,51 @@ class _AnimatedCheckButtonState extends State<_AnimatedCheckButton>
     final uncheckedColor = theme.colorScheme.surfaceContainerHighest;
     return Padding(
       padding: EdgeInsets.only(top: 1.5),
-      child: GestureDetector(
-        onTap: _pending
-            ? null
-            : () async {
-                setState(() {
-                  _pending = true;
-                  _localValue = !_localValue;
-                });
-                _playAnimation();
-                await Future.delayed(const Duration(milliseconds: 300));
-                if (mounted) widget.onChanged();
-                if (mounted) setState(() => _pending = false);
-              },
-        child: ScaleTransition(
-          scale: _scale,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-            height: 24,
-            width: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: checked ? checkedColor : uncheckedColor,
-              border: Border.all(
-                color: checked
-                    ? checkedColor.withValues(alpha: 0.2)
-                    : theme.colorScheme.outline,
-                width: 1.2,
-              ),
-            ),
-            child: AnimatedScale(
+      child: Semantics(
+        label: widget.semanticsLabel,
+        button: true,
+        child: GestureDetector(
+          onTap: _pending
+              ? null
+              : () async {
+                  setState(() {
+                    _pending = true;
+                    _localValue = !_localValue;
+                  });
+                  _playAnimation();
+                  await Future.delayed(const Duration(seconds: 5));
+                  if (mounted) widget.onChanged();
+                  if (mounted) setState(() => _pending = false);
+                },
+          child: ScaleTransition(
+            scale: _scale,
+            child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutBack,
-              scale: checked ? 1 : 0.7,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 160),
-                opacity: checked ? 1 : 0,
-                child: Icon(
-                  Icons.check,
-                  size: 18,
-                  color: theme.colorScheme.onPrimary,
+              curve: Curves.easeOut,
+              height: 24,
+              width: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: checked ? checkedColor : uncheckedColor,
+                border: Border.all(
+                  color: checked
+                      ? checkedColor.withValues(alpha: 0.2)
+                      : theme.colorScheme.outline,
+                  width: 1.2,
+                ),
+              ),
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutBack,
+                scale: checked ? 1 : 0.7,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 160),
+                  opacity: checked ? 1 : 0,
+                  child: Icon(
+                    Icons.check,
+                    size: 18,
+                    color: theme.colorScheme.onPrimary,
+                  ),
                 ),
               ),
             ),

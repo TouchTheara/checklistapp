@@ -20,7 +20,7 @@ class TermsPrivacyView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'By using Construction Checklist, you agree to use the app responsibly, protect crew data, and comply with local safety regulations.',
+              'By using SafeList, you agree to use the app responsibly, protect crew data, and comply with local safety regulations.',
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),

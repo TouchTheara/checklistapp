@@ -41,7 +41,7 @@ class ChecklistApp extends StatelessWidget {
     final appController = Get.find<AppController>();
     return Obx(
       () => GetMaterialApp(
-        title: 'Construction Checklist',
+        title: 'SafeList',
         debugShowCheckedModeBanner: false,
         translations: AppTranslations(),
         locale: appController.locale,

@@ -1,4 +1,4 @@
-package com.example.checklistapp
+package com.example.safelist
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,5 +1,5 @@
-import 'package:checklistapp/app/data/models/todo.dart';
-import 'package:checklistapp/app/data/services/storage_service.dart';
+import 'package:safelist/app/data/models/todo.dart';
+import 'package:safelist/app/data/services/storage_service.dart';
 
 class MockStorageService extends StorageService {
   List<Todo> _todos = [];

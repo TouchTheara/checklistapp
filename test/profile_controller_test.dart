@@ -1,6 +1,6 @@
-import 'package:checklistapp/app/data/repositories/profile_repository.dart';
-import 'package:checklistapp/app/data/repositories/todo_repository.dart';
-import 'package:checklistapp/app/modules/profile/controllers/profile_controller.dart';
+import 'package:safelist/app/data/repositories/profile_repository.dart';
+import 'package:safelist/app/data/repositories/todo_repository.dart';
+import 'package:safelist/app/modules/profile/controllers/profile_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

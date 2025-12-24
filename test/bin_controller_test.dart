@@ -1,6 +1,6 @@
-import 'package:checklistapp/app/data/models/todo.dart';
-import 'package:checklistapp/app/data/repositories/todo_repository.dart';
-import 'package:checklistapp/app/modules/bin/controllers/bin_controller.dart';
+import 'package:safelist/app/data/models/todo.dart';
+import 'package:safelist/app/data/repositories/todo_repository.dart';
+import 'package:safelist/app/modules/bin/controllers/bin_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

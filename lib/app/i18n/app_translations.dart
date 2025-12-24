@@ -8,7 +8,7 @@ class AppTranslations extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
         'en_US': {
-          'app.title': 'Construction Checklist',
+          'app.title': 'SafeList',
           'onboarding.skip': 'Skip',
           'onboarding.next': 'Next',
           'onboarding.start': 'Get started',
@@ -145,7 +145,7 @@ class AppTranslations extends Translations {
           'language.select.desc': 'Pick a language to get started',
         },
         'km_KH': {
-          'app.title': 'បញ្ជីត្រួតពិនិត្យសំណង់',
+          'app.title': 'SafeList',
           'onboarding.skip': 'ឆ្លងកាត់',
           'onboarding.next': 'បន្ទាប់',
           'onboarding.start': 'ចាប់ផ្តើម',

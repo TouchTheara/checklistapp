@@ -110,11 +110,14 @@ class _LoginFormState extends State<_LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      physics: const BouncingScrollPhysics(),
       child: Form(
         key: _formKey,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             AppTextField(
               controller: _emailController,
@@ -207,11 +210,14 @@ class _RegisterFormState extends State<_RegisterForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      physics: const BouncingScrollPhysics(),
       child: Form(
         key: _formKey,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             AppTextField(
               controller: _nameController,
