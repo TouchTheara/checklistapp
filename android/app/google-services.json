@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "902773632002",
+    "project_id": "safelist-5b99d",
+    "storage_bucket": "safelist-5b99d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:902773632002:android:d3c30e61301cfb52dc0b1b",
+        "android_client_info": {
+          "package_name": "com.example.safelist"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzmR5BsyqYlPiV0zFUUJ0w_Ae3X9kBNGE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

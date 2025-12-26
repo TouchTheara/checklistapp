@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/profile.dart';
 
@@ -11,6 +12,7 @@ class ProfileRepository extends GetxService {
 
   final Rx<Profile> _profile = const Profile().obs;
   String? _userId;
+  final _firestore = FirebaseFirestore.instance;
 
   Profile get profile => _profile.value;
 
@@ -22,15 +24,30 @@ class ProfileRepository extends GetxService {
   Future<void> loadForUser(String? userId) async {
     _userId = userId;
     final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString(_key);
-    if (stored != null) {
+    Profile? loaded;
+    if (userId != null) {
       try {
-        final json = jsonDecode(stored) as Map<String, dynamic>;
-        _profile.value = Profile.fromJson(json);
+        final doc =
+            await _firestore.collection('users').doc(userId).get();
+        if (doc.exists && doc.data() != null) {
+          loaded = Profile.fromJson(doc.data()!);
+        }
       } catch (_) {
-        _profile.value = const Profile();
+        // ignore
       }
     }
+    if (loaded == null) {
+      final stored = prefs.getString(_key);
+      if (stored != null) {
+        try {
+          final json = jsonDecode(stored) as Map<String, dynamic>;
+          loaded = Profile.fromJson(json);
+        } catch (_) {
+          loaded = const Profile();
+        }
+      }
+    }
+    _profile.value = loaded ?? const Profile();
   }
 
   Future<void> updateProfile(Profile profile) async {
@@ -51,6 +68,16 @@ class ProfileRepository extends GetxService {
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key, jsonEncode(_profile.value.toJson()));
+    if (_userId != null) {
+      try {
+        await _firestore
+            .collection('users')
+            .doc(_userId)
+            .set(_profile.value.toJson(), SetOptions(merge: true));
+      } catch (_) {
+        // ignore sync failures offline
+      }
+    }
   }
 
   String get _key =>

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'app/controllers/app_controller.dart';
 import 'app/data/repositories/profile_repository.dart';
@@ -13,9 +14,13 @@ import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
 import 'app/modules/home/views/home_view.dart';
 import 'app/modules/home/bindings/home_binding.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await Get.putAsync<TodoRepository>(() => TodoRepository().init());
   await Get.putAsync<ProfileRepository>(() => ProfileRepository().init());
   await Get.putAsync<ThemeService>(() => ThemeService().init());

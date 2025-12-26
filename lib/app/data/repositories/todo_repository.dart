@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/todo.dart';
 import '../services/storage_service.dart';
@@ -11,6 +12,8 @@ class TodoRepository extends GetxService {
   final StorageService _storageService;
   final RxList<Todo> _todos;
   final Rx<SortOption> _sortOption = SortOption.priorityHighFirst.obs;
+  final _firestore = FirebaseFirestore.instance;
+  String? _userId;
 
   RxList<Todo> get rawTodos => _todos;
 
@@ -22,15 +25,32 @@ class TodoRepository extends GetxService {
   }
 
   Future<void> loadForUser(String? userId) async {
+    _userId = userId;
     _storageService.setUser(userId);
     final hasData = await _storageService.hasSavedData();
-    if (hasData) {
-      final savedTodos = await _storageService.loadTodos();
-      _todos.assignAll(_normalized(savedTodos));
-    } else {
-      _todos.assignAll(_defaultSeed);
+    List<Todo> loaded = [];
+    try {
+      if (userId != null) {
+        final snapshot = await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('todos')
+            .get();
+        loaded = snapshot.docs
+            .map((doc) => Todo.fromJson(doc.data()))
+            .toList();
+      }
+    } catch (_) {
+      // ignore network errors, fallback to local
+    }
+    if (loaded.isEmpty && hasData) {
+      loaded = await _storageService.loadTodos();
+    }
+    if (loaded.isEmpty) {
+      loaded = _defaultSeed;
       await _saveTodos();
     }
+    _todos.assignAll(_normalized(loaded));
 
     final savedSortOption = await _storageService.loadSortOption();
     if (savedSortOption != null) {
@@ -255,9 +275,25 @@ class TodoRepository extends GetxService {
 
   Future<void> _saveTodos() async {
     await _storageService.saveTodos(_todos.toList());
+    await _syncToFirestore();
   }
 
   Future<void> _saveSortOption() async {
     await _storageService.saveSortOption(_sortOption.value);
+  }
+
+  Future<void> _syncToFirestore() async {
+    if (_userId == null) return;
+    try {
+      final batch = _firestore.batch();
+      final col = _firestore.collection('users').doc(_userId).collection('todos');
+      for (final todo in _todos) {
+        final ref = col.doc(todo.id);
+        batch.set(ref, todo.toJson(), SetOptions(merge: true));
+      }
+      await batch.commit();
+    } catch (_) {
+      // ignore sync failures in offline/test
+    }
   }
 }

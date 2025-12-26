@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'package:safelist/app/data/models/todo.dart';
 import 'package:safelist/app/data/repositories/profile_repository.dart';
@@ -12,6 +13,7 @@ import 'package:safelist/app/modules/dashboard/controllers/dashboard_controller.
 import 'package:safelist/app/modules/done/controllers/done_controller.dart';
 import 'package:safelist/app/modules/home/controllers/home_controller.dart';
 import 'package:safelist/app/modules/profile/controllers/profile_controller.dart';
+import 'package:safelist/firebase_options.dart';
 
 import '../mock_storage_service.dart';
 
@@ -33,6 +35,9 @@ class TestScope {
 
 Future<TestScope> setupTestScope({List<Todo>? seed}) async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.android,
+  );
   SharedPreferences.setMockInitialValues({});
 
   final todoRepository =

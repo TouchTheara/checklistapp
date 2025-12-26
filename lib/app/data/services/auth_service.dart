@@ -1,17 +1,15 @@
-import 'dart:convert';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  static const _usersKey = 'auth_users'; // json map of email -> {name,email,password}
   static const _userKey = 'auth_user'; // current user email
   static const _loggedInKey = 'auth_logged_in';
 
   String? _email;
-  String? _password;
   String? _name;
   bool _loggedIn = false;
   String? _userId;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? get email => _email;
   String? get name => _name;
@@ -20,14 +18,16 @@ class AuthService {
 
   Future<AuthService> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _loggedIn = prefs.getBool(_loggedInKey) ?? false;
-    _userId = prefs.getString(_userKey);
-    final users = _loadUsers(prefs);
-    if (_userId != null && users.containsKey(_userId)) {
-      final user = users[_userId]!;
-      _email = user['email'] as String?;
-      _password = user['password'] as String?;
-      _name = user['name'] as String?;
+    final current = _auth.currentUser;
+    if (current != null) {
+      _loggedIn = true;
+      _userId = current.uid;
+      _email = current.email;
+      _name = current.displayName;
+    } else {
+      _loggedIn = prefs.getBool(_loggedInKey) ?? false;
+      _userId = prefs.getString(_userKey);
+      // If offline and we had a stored user id, keep basic session
     }
     return this;
   }
@@ -37,44 +37,41 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final users = _loadUsers(prefs);
-    if (users.containsKey(email)) {
-      return false; // user already exists
+    try {
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      await cred.user?.updateDisplayName(name);
+      _name = name;
+      _email = email;
+      _userId = cred.user?.uid;
+      _loggedIn = true;
+      await _persistSession();
+      return true;
+    } catch (_) {
+      return false;
     }
-    users[email] = {
-      'name': name,
-      'email': email,
-      'password': password,
-    };
-    await _saveUsers(prefs, users);
-    _name = name;
-    _email = email;
-    _password = password;
-    _userId = email;
-    _loggedIn = true;
-    await prefs.setBool(_loggedInKey, true);
-    await prefs.setString(_userKey, _userId!);
-    return true;
   }
 
   Future<bool> login({
     required String email,
     required String password,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final users = _loadUsers(prefs);
-    final user = users[email];
-    if (user == null) return false;
-    if (user['password'] != password) return false;
-    _name = user['name'] as String?;
-    _email = user['email'] as String?;
-    _password = user['password'] as String?;
-    _userId = email;
-    _loggedIn = true;
-    await prefs.setBool(_loggedInKey, true);
-    await prefs.setString(_userKey, _userId!);
-    return true;
+    try {
+      final cred = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      _name = cred.user?.displayName;
+      _email = cred.user?.email;
+      _userId = cred.user?.uid;
+      _loggedIn = true;
+      await _persistSession();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> logout() async {
@@ -82,45 +79,33 @@ class AuthService {
     _loggedIn = false;
     _userId = null;
     await prefs.setBool(_loggedInKey, false);
+    await prefs.remove(_userKey);
+    await _auth.signOut();
   }
 
   Future<void> updateProfile({
     required String name,
     required String email,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final users = _loadUsers(prefs);
-    final currentId = _userId ?? _email;
-    if (currentId == null) return;
-    users.remove(currentId);
-    users[email] = {
-      'name': name,
-      'email': email,
-      'password': _password ?? '',
-    };
-    await _saveUsers(prefs, users);
-    _name = name;
-    _email = email;
-    _userId = email;
-    await prefs.setString(_userKey, email);
-  }
-
-  Map<String, Map<String, dynamic>> _loadUsers(SharedPreferences prefs) {
-    final jsonString = prefs.getString(_usersKey);
-    if (jsonString == null) return {};
-    try {
-      final raw = jsonDecode(jsonString) as Map<String, dynamic>;
-      return raw.map((key, value) =>
-          MapEntry(key, Map<String, dynamic>.from(value as Map)));
-    } catch (_) {
-      return {};
+    final user = _auth.currentUser;
+    if (user != null) {
+      try {
+        await user.updateDisplayName(name);
+      } on FirebaseAuthException {
+        // If requires recent login or fails, keep existing values to avoid crash.
+      }
     }
+    _name = name;
+    _email = email.isNotEmpty ? email : _email;
+    _userId = user?.uid ?? _userId;
+    await _persistSession();
   }
 
-  Future<void> _saveUsers(
-    SharedPreferences prefs,
-    Map<String, Map<String, dynamic>> users,
-  ) async {
-    await prefs.setString(_usersKey, jsonEncode(users));
+  Future<void> _persistSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_loggedInKey, _loggedIn);
+    if (_userId != null) {
+      await prefs.setString(_userKey, _userId!);
+    }
   }
 }

@@ -1,5 +1,5 @@
 # Uncomment this line to define a global platform for your project
-# platform :ios, '13.0'
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -33,11 +33,36 @@ target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths
+  
   end
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # Fix 1: "-G" unsupported option coming from BoringSSL-GRPC flags (older CocoaPods/Xcode combos)
+    if target.name == 'BoringSSL-GRPC'
+      target.source_build_phase.files.each do |file|
+        if file.settings && file.settings['COMPILER_FLAGS']
+          flags = file.settings['COMPILER_FLAGS'].split
+          flags.reject! { |f| f == '-GCC_WARN_INHIBIT_ALL_WARNINGS' }
+          file.settings['COMPILER_FLAGS'] = flags.join(' ')
+        end
+      end
+    end
+  end
+
+  # Fix 2: Xcode 16.3 template parse error in gRPC basic_seq.h
+  # (Workaround mentioned by Firebase/gRPC issue threads: patch the header in Pods) :contentReference[oaicite:3]{index=3}
+  Dir.glob(File.join(__dir__, 'Pods/gRPC-Core/src/core/lib/promise/detail/basic_seq.h')).each do |path|
+    s = File.read(path)
+    # Patch only if the known pattern exists and hasn't been patched yet
+    if s.include?('Traits::template CallSeqFactory(') && !s.include?('Traits::template CallSeqFactory<>(')
+      s = s.gsub('Traits::template CallSeqFactory(', 'Traits::template CallSeqFactory<>(')
+      File.write(path, s)
+    end
   end
 end
+
+
