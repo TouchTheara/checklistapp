@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import '../models/profile.dart';
 
@@ -13,6 +15,7 @@ class ProfileRepository extends GetxService {
   final Rx<Profile> _profile = const Profile().obs;
   String? _userId;
   final _firestore = FirebaseFirestore.instance;
+  final _storage = FirebaseStorage.instance;
 
   Profile get profile => _profile.value;
 
@@ -48,6 +51,9 @@ class ProfileRepository extends GetxService {
       }
     }
     _profile.value = loaded ?? const Profile();
+    if (userId != null) {
+      await _ensureRemoteProfile();
+    }
   }
 
   Future<void> updateProfile(Profile profile) async {
@@ -61,7 +67,19 @@ class ProfileRepository extends GetxService {
   }
 
   Future<void> updateAvatar(String? path) async {
-    _profile.value = _profile.value.copyWith(avatarPath: path);
+    if (_userId == null) return;
+    String? url = path;
+    if (path != null && path.isNotEmpty) {
+      try {
+        final file = File(path);
+        final ref = _storage.ref().child('users/$_userId/avatar.jpg');
+        await ref.putFile(file);
+        url = await ref.getDownloadURL();
+      } catch (_) {
+        // ignore upload errors
+      }
+    }
+    _profile.value = _profile.value.copyWith(avatarPath: url);
     await _persist();
   }
 
@@ -77,6 +95,21 @@ class ProfileRepository extends GetxService {
       } catch (_) {
         // ignore sync failures offline
       }
+    }
+  }
+
+  Future<void> _ensureRemoteProfile() async {
+    if (_userId == null) return;
+    try {
+      final doc = await _firestore.collection('users').doc(_userId).get();
+      if (!doc.exists) {
+        await _firestore
+            .collection('users')
+            .doc(_userId)
+            .set(_profile.value.toJson(), SetOptions(merge: true));
+      }
+    } catch (_) {
+      // ignore
     }
   }
 

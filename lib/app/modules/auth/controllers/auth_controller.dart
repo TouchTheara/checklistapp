@@ -33,4 +33,11 @@ class AuthController extends GetxController {
     isLoading.value = false;
     return ok;
   }
+
+  Future<bool> loginWithGoogle() async {
+    isLoading.value = true;
+    final ok = await _appController.loginWithGoogle();
+    isLoading.value = false;
+    return ok;
+  }
 }

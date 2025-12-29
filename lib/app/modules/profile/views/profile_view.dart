@@ -229,14 +229,21 @@ class _ProfileAvatar extends StatelessWidget {
     final theme = Theme.of(context);
     final avatarPath = controller.avatarPath;
     final hasImage = avatarPath != null && avatarPath.isNotEmpty;
+    ImageProvider? provider;
+    if (hasImage) {
+      if (avatarPath!.startsWith('http')) {
+        provider = NetworkImage(avatarPath);
+      } else {
+        provider = FileImage(File(avatarPath)) as ImageProvider;
+      }
+    }
     return Stack(
       clipBehavior: Clip.none,
       children: [
         CircleAvatar(
           radius: 32,
           backgroundColor: theme.colorScheme.primaryContainer,
-          backgroundImage:
-              hasImage ? FileImage(File(avatarPath)) as ImageProvider : null,
+          backgroundImage: provider,
           child: hasImage
               ? null
               : Icon(

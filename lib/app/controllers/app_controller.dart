@@ -5,6 +5,7 @@ import '../data/services/auth_service.dart';
 import '../data/services/locale_service.dart';
 import '../data/services/onboarding_service.dart';
 import '../data/services/theme_service.dart';
+import '../data/services/sample_data_service.dart';
 import '../data/repositories/todo_repository.dart';
 import '../data/repositories/profile_repository.dart';
 import '../modules/home/controllers/home_controller.dart';
@@ -79,6 +80,7 @@ class AppController extends GetxController {
       _startOnProfile.value = false;
       _ensureHomeBindings();
       await _syncUserData();
+      await _seedDemoIfEmpty();
       _resetHomeTab();
     }
     return ok;
@@ -99,6 +101,7 @@ class AppController extends GetxController {
       _startOnProfile.value = false;
       _ensureHomeBindings();
       await _syncUserData();
+      await _seedDemoIfEmpty();
       _resetHomeTab();
     }
     return ok;
@@ -120,12 +123,32 @@ class AppController extends GetxController {
     _userEmail.value = email;
   }
 
+  Future<bool> loginWithGoogle() async {
+    final (ok, error) = await _authService.signInWithGoogle();
+    _loggedIn.value = ok;
+    if (ok) {
+      _startOnProfile.value = false;
+      _ensureHomeBindings();
+      await _syncUserData();
+      await _seedDemoIfEmpty();
+      _resetHomeTab();
+    } else if (error != null && error.isNotEmpty) {
+      Get.snackbar('auth.failed'.tr, error,
+          snackPosition: SnackPosition.BOTTOM);
+      // Also log for diagnostics
+      // ignore: avoid_print
+      print('Google sign-in failed: $error');
+    }
+    return ok;
+  }
+
   Future<void> _syncUserData() async {
     final userId = _authService.userId;
     _userName.value = _authService.name ?? '';
     _userEmail.value = _authService.email ?? '';
     await _todoRepository.loadForUser(userId);
     await _profileRepository.loadForUser(userId);
+    await _hydrateProfileFromAuth();
   }
 
   void _resetHomeTab() {
@@ -137,6 +160,31 @@ class AppController extends GetxController {
   void _ensureHomeBindings() {
     if (!Get.isRegistered<HomeController>()) {
       HomeBinding().dependencies();
+    }
+  }
+
+  Future<void> _seedDemoIfEmpty() async {
+    final seeder = Get.find<SampleDataService>();
+    await seeder.seedForCurrentUser();
+    await _todoRepository.loadForUser(_authService.userId);
+  }
+
+  Future<void> _hydrateProfileFromAuth() async {
+    final authName = _authService.name;
+    final authEmail = _authService.email;
+    if (authEmail == null || authEmail.isEmpty) return;
+    final profile = _profileRepository.profile;
+    final isDefaultName =
+        profile.name == 'Site Safety Lead' || profile.name.isEmpty;
+    final isDefaultEmail =
+        profile.email == 'safety@sitehq.com' || profile.email.isEmpty;
+    if (isDefaultName || isDefaultEmail) {
+      await _profileRepository.updateProfile(
+        profile.copyWith(
+          name: authName?.isNotEmpty == true ? authName : profile.name,
+          email: authEmail,
+        ),
+      );
     }
   }
 }

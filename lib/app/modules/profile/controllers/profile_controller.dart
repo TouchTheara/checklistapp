@@ -35,9 +35,7 @@ class ProfileController extends GetxController {
   }
 
   Future<void> updateAvatar(String? path) async {
-    await _profileRepository.updateProfile(
-      _profileRepository.profile.copyWith(avatarPath: path),
-    );
+    await _profileRepository.updateAvatar(path);
   }
 
   Future<void> loadForUser(String? userId) async {

@@ -163,6 +163,8 @@ class _LoginFormState extends State<_LoginForm> {
                     : Text('auth.login'.tr),
               ),
             ),
+            const SizedBox(height: 12),
+            _GoogleButton(onTap: widget.authController.loginWithGoogle),
           ],
         ),
       ),
@@ -277,9 +279,40 @@ class _RegisterFormState extends State<_RegisterForm> {
                     : Text('auth.register'.tr),
               ),
             ),
+            const SizedBox(height: 12),
+            _GoogleButton(onTap: widget.authController.loginWithGoogle),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _GoogleButton extends StatelessWidget {
+  const _GoogleButton({required this.onTap});
+
+  final Future<bool> Function() onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        minimumSize: const Size.fromHeight(48),
+        side: const BorderSide(color: Color(0xFFE0E0E0)),
+      ),
+      onPressed: () async {
+        final ok = await onTap();
+        if (!ok) {
+          Get.snackbar('auth.failed'.tr, 'auth.login.error'.tr,
+              snackPosition: SnackPosition.BOTTOM);
+        } else {
+          Get.offAllNamed(Routes.home);
+        }
+      },
+      icon: const Icon(Icons.g_mobiledata, size: 28),
+      label: Text('auth.google'.tr),
     );
   }
 }

@@ -9,6 +9,7 @@ import 'app/data/services/auth_service.dart';
 import 'app/data/services/locale_service.dart';
 import 'app/data/services/onboarding_service.dart';
 import 'app/data/services/theme_service.dart';
+import 'app/data/services/sample_data_service.dart';
 import 'app/i18n/app_translations.dart';
 import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
@@ -27,6 +28,7 @@ void main() async {
   await Get.putAsync<OnboardingService>(() => OnboardingService().init());
   await Get.putAsync<LocaleService>(() => LocaleService().init());
   await Get.putAsync<AuthService>(() => AuthService().init());
+  Get.put<SampleDataService>(SampleDataService());
   Get.put<AppController>(
     AppController(
       Get.find<ThemeService>(),

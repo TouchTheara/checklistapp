@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
@@ -10,6 +11,7 @@ class AuthService {
   bool _loggedIn = false;
   String? _userId;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   String? get email => _email;
   String? get name => _name;
@@ -99,6 +101,30 @@ class AuthService {
     _email = email.isNotEmpty ? email : _email;
     _userId = user?.uid ?? _userId;
     await _persistSession();
+  }
+
+  Future<(bool ok, String? error)> signInWithGoogle() async {
+    try {
+      GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
+      googleUser ??= await _googleSignIn.signIn();
+      if (googleUser == null) return (false, 'auth.google.cancelled');
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final result = await _auth.signInWithCredential(credential);
+      _name = result.user?.displayName;
+      _email = result.user?.email;
+      _userId = result.user?.uid;
+      _loggedIn = true;
+      await _persistSession();
+      return (true, null);
+    } on FirebaseAuthException catch (e) {
+      return (false, e.code);
+    } catch (e) {
+      return (false, e.toString());
+    }
   }
 
   Future<void> _persistSession() async {
