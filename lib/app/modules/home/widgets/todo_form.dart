@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../data/models/todo.dart';
 import '../../../data/repositories/todo_repository.dart';
@@ -32,10 +36,15 @@ class _TodoFormState extends State<TodoForm> {
   DateTime? _dueDate;
   DateTime? _reminderAt;
   late List<SubTask> _subtasks;
+  late List<String> _attachments; // existing remote URLs
+  late List<String> _localAttachments; // local file paths pending upload
+  bool _isSubmitting = false;
+  late final String _todoId;
 
   @override
   void initState() {
     super.initState();
+    _todoId = widget.existing?.id ?? const Uuid().v4();
     _titleController = TextEditingController(text: widget.existing?.title);
     _descriptionController =
         TextEditingController(text: widget.existing?.description);
@@ -44,6 +53,8 @@ class _TodoFormState extends State<TodoForm> {
     _dueDate = widget.existing?.dueDate;
     _reminderAt = widget.existing?.reminderAt;
     _subtasks = widget.existing?.subtasks.toList() ?? [];
+    _attachments = widget.existing?.attachments.toList() ?? [];
+    _localAttachments = [];
   }
 
   @override
@@ -55,10 +66,11 @@ class _TodoFormState extends State<TodoForm> {
     super.dispose();
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
+    setState(() => _isSubmitting = true);
     final repository = Get.find<TodoRepository>();
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim().isEmpty
@@ -68,14 +80,16 @@ class _TodoFormState extends State<TodoForm> {
         ? null
         : _categoryController.text.trim();
 
-    final todo = widget.existing == null
-        ? Todo.create(
+    var todo = widget.existing == null
+        ? Todo(
+            id: _todoId,
             title: title,
             description: description,
             priority: _priority,
             category: category,
             dueDate: _dueDate,
             reminderAt: _reminderAt,
+            attachments: _attachments,
             subtasks: _subtasks,
           )
         : widget.existing!.copyWith(
@@ -85,6 +99,7 @@ class _TodoFormState extends State<TodoForm> {
             category: category,
             dueDate: _dueDate,
             reminderAt: _reminderAt,
+            attachments: _attachments,
             subtasks: _subtasks,
           );
 
@@ -93,7 +108,24 @@ class _TodoFormState extends State<TodoForm> {
     } else {
       repository.updateTodo(todo);
     }
-    Navigator.of(context).maybePop();
+
+    // Upload any local attachments after creating/updating the task
+    if (_localAttachments.isNotEmpty) {
+      final uploaded = <String>[];
+      for (final path in _localAttachments) {
+        final url = await repository.uploadAttachment(path, todoId: todo.id);
+        if (url != null) uploaded.add(url);
+      }
+      if (uploaded.isNotEmpty) {
+        todo = todo.copyWith(attachments: [...todo.attachments, ...uploaded]);
+        repository.updateTodo(todo);
+      }
+    }
+
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+      Navigator.of(context).maybePop();
+    }
   }
 
   void _addSubtask() {
@@ -182,6 +214,38 @@ class _TodoFormState extends State<TodoForm> {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
+  Future<void> _chooseAttachmentSource() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    await _addAttachment(source);
+  }
+
+  Future<void> _addAttachment(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: source);
+    if (picked != null) {
+      setState(() => _localAttachments.add(picked.path));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -195,324 +259,447 @@ class _TodoFormState extends State<TodoForm> {
         .toSet()
         .toList();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, bottomInset + 24),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(24, 24, 24, bottomInset + 24),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          widget.existing == null ? Icons.add_task : Icons.edit,
-                          color: colorScheme.onPrimaryContainer,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          widget.existing == null
-                              ? 'todo.new.title'.tr
-                              : 'todo.edit.title'.tr,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  AppTextField(
-                    fieldKey: TodoForm.titleFieldKey,
-                    controller: _titleController,
-                    label: 'todo.title'.tr,
-                    hintText: 'todo.title.hint'.tr,
-                    prefixIcon: const Icon(Icons.title),
-                    autofocus: true,
-                    textInputAction: TextInputAction.next,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'todo.title.error'.tr;
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  AppTextField(
-                    fieldKey: TodoForm.descriptionFieldKey,
-                    controller: _descriptionController,
-                    label: 'todo.desc'.tr,
-                    hintText: 'todo.desc.hint'.tr,
-                    prefixIcon: const Icon(Icons.description),
-                    keyboardType: TextInputType.multiline,
-                    textInputAction: TextInputAction.newline,
-                    minLines: 1,
-                    maxLines: null,
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.event_outlined),
-                          title: Text(
-                            _dueDate == null
-                                ? 'todo.due.none'.tr
-                                : 'todo.due.label'.trParams(
-                                    {'date': _formatDate(_dueDate!)},
-                                  ),
-                          ),
-                          onTap: _pickDueDate,
-                          trailing: TextButton(
-                            onPressed: _pickDueDate,
-                            child: Text('todo.due.pick'.tr),
-                          ),
-                        ),
-                      ),
-                      if (_dueDate != null)
-                        IconButton(
-                          tooltip: 'Clear',
-                          onPressed: () => setState(() => _dueDate = null),
-                          icon: const Icon(Icons.close),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  AppTextField(
-                    controller: _categoryController,
-                    label: 'todo.category.label'.tr,
-                    hintText: 'todo.category.hint'.tr,
-                    prefixIcon: const Icon(Icons.folder_open),
-                    textInputAction: TextInputAction.next,
-                  ),
-                  if (categories.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: categories
-                          .take(6)
-                          .map(
-                            (c) => ActionChip(
-                              label: Text(c),
-                              avatar: const Icon(Icons.label_outline, size: 16),
-                              onPressed: () =>
-                                  setState(() => _categoryController.text = c),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.alarm),
-                    title: Text(_reminderAt == null
-                        ? 'todo.reminder.none'.tr
-                        : 'todo.reminder.label'
-                            .trParams({'date': _formatDate(_reminderAt!)})),
-                    trailing: TextButton(
-                      onPressed: _pickReminder,
-                      child: Text('todo.reminder.set'.tr),
-                    ),
-                    onTap: _pickReminder,
-                  ),
-                  if (_reminderAt != null)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: () => setState(() => _reminderAt = null),
-                        icon: const Icon(Icons.close),
-                        label: Text('todo.reminder.clear'.tr),
+                            child: Icon(
+                              widget.existing == null
+                                  ? Icons.add_task
+                                  : Icons.edit,
+                              color: colorScheme.onPrimaryContainer,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              widget.existing == null
+                                  ? 'todo.new.title'.tr
+                                  : 'todo.edit.title'.tr,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<TodoPriority>(
-                    key: TodoForm.priorityFieldKey,
-                    initialValue: _priority,
-                    style: theme.textTheme.bodyLarge,
-                    decoration: InputDecoration(
-                      labelText: 'todo.priority'.tr,
-                      prefixIcon: Icon(
-                        _getPriorityIcon(_priority),
-                        color: _getPriorityColor(_priority),
+                      const SizedBox(height: 24),
+                      AppTextField(
+                        fieldKey: TodoForm.titleFieldKey,
+                        controller: _titleController,
+                        label: 'todo.title'.tr,
+                        hintText: 'todo.title.hint'.tr,
+                        prefixIcon: const Icon(Icons.title),
+                        autofocus: true,
+                        textInputAction: TextInputAction.next,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'todo.title.error'.tr;
+                          }
+                          return null;
+                        },
                       ),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: colorScheme.outline),
+                      const SizedBox(height: 20),
+                      AppTextField(
+                        fieldKey: TodoForm.descriptionFieldKey,
+                        controller: _descriptionController,
+                        label: 'todo.desc'.tr,
+                        hintText: 'todo.desc.hint'.tr,
+                        prefixIcon: const Icon(Icons.description),
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        minLines: 1,
+                        maxLines: null,
+                        textCapitalization: TextCapitalization.sentences,
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: colorScheme.outline.withValues(alpha: 0.5),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.event_outlined),
+                              title: Text(
+                                _dueDate == null
+                                    ? 'todo.due.none'.tr
+                                    : 'todo.due.label'.trParams(
+                                        {'date': _formatDate(_dueDate!)},
+                                      ),
+                              ),
+                              onTap: _pickDueDate,
+                              trailing: TextButton(
+                                onPressed: _pickDueDate,
+                                child: Text('todo.due.pick'.tr),
+                              ),
+                            ),
+                          ),
+                          if (_dueDate != null)
+                            IconButton(
+                              tooltip: 'Clear',
+                              onPressed: () => setState(() => _dueDate = null),
+                              icon: const Icon(Icons.close),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      AppTextField(
+                        controller: _categoryController,
+                        label: 'todo.category.label'.tr,
+                        hintText: 'todo.category.hint'.tr,
+                        prefixIcon: const Icon(Icons.folder_open),
+                        textInputAction: TextInputAction.next,
+                      ),
+                      if (categories.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: categories
+                              .take(6)
+                              .map(
+                                (c) => ActionChip(
+                                  label: Text(c),
+                                  avatar:
+                                      const Icon(Icons.label_outline, size: 16),
+                                  onPressed: () => setState(
+                                      () => _categoryController.text = c),
+                                ),
+                              )
+                              .toList(),
                         ),
+                      ],
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Text(
+                            'Attachments',
+                            style: theme.textTheme.titleMedium,
+                          ),
+                          const Spacer(),
+                          TextButton.icon(
+                            onPressed: _chooseAttachmentSource,
+                            icon:
+                                const Icon(Icons.add_photo_alternate_outlined),
+                            label: const Text('Add photo'),
+                          ),
+                        ],
                       ),
-                      focusedBorder: OutlineInputBorder(
+                      if (_attachments.isNotEmpty ||
+                          _localAttachments.isNotEmpty)
+                        SizedBox(
+                          height: 90,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount:
+                                _attachments.length + _localAttachments.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (_, index) {
+                              final isRemote = index < _attachments.length;
+                              final url = isRemote
+                                  ? _attachments[index]
+                                  : _localAttachments[
+                                      index - _attachments.length];
+                              return Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: AspectRatio(
+                                      aspectRatio: 1,
+                                      child: isRemote
+                                          ? CachedNetworkImage(
+                                              imageUrl: url,
+                                              fit: BoxFit.cover,
+                                              placeholder: (_, __) => Container(
+                                                color: colorScheme
+                                                    .surfaceContainerHighest,
+                                              ),
+                                              errorWidget: (_, __, ___) =>
+                                                  Container(
+                                                color: colorScheme
+                                                    .surfaceContainerHighest,
+                                                child: Icon(
+                                                    Icons.broken_image_outlined,
+                                                    color: colorScheme.outline),
+                                              ),
+                                            )
+                                          : Image.file(
+                                              File(url),
+                                              fit: BoxFit.cover,
+                                            ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          if (isRemote) {
+                                            _attachments.removeAt(index);
+                                          } else {
+                                            _localAttachments.removeAt(
+                                                index - _attachments.length);
+                                          }
+                                        });
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black54,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        padding: const EdgeInsets.all(4),
+                                        child: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.alarm),
+                        title: Text(_reminderAt == null
+                            ? 'todo.reminder.none'.tr
+                            : 'todo.reminder.label'
+                                .trParams({'date': _formatDate(_reminderAt!)})),
+                        trailing: TextButton(
+                          onPressed: _pickReminder,
+                          child: Text('todo.reminder.set'.tr),
+                        ),
+                        onTap: _pickReminder,
+                      ),
+                      if (_reminderAt != null)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => setState(() => _reminderAt = null),
+                            icon: const Icon(Icons.close),
+                            label: Text('todo.reminder.clear'.tr),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<TodoPriority>(
+                        key: TodoForm.priorityFieldKey,
+                        initialValue: _priority,
+                        style: theme.textTheme.bodyLarge,
+                        decoration: InputDecoration(
+                          labelText: 'todo.priority'.tr,
+                          prefixIcon: Icon(
+                            _getPriorityIcon(_priority),
+                            color: _getPriorityColor(_priority),
+                          ),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: colorScheme.outline),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: colorScheme.outline.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                                color: colorScheme.primary, width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                        ),
+                        items: TodoPriority.values
+                            .map(
+                              (priority) => DropdownMenuItem(
+                                value: priority,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      _getPriorityIcon(priority),
+                                      color: _getPriorityColor(priority),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(priority.label),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _priority = value;
+                          });
+                        },
+                        dropdownColor: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
-                        borderSide:
-                            BorderSide(color: colorScheme.primary, width: 2),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
+                      const SizedBox(height: 32),
+                      Text(
+                        'todo.subtasks'.tr,
+                        style: theme.textTheme.titleMedium,
                       ),
-                    ),
-                    items: TodoPriority.values
-                        .map(
-                          (priority) => DropdownMenuItem(
-                            value: priority,
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _subtaskController,
+                              decoration: InputDecoration(
+                                hintText: 'todo.subtasks.hint'.tr,
+                              ),
+                              onSubmitted: (_) => _addSubtask(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton.icon(
+                            onPressed: _addSubtask,
+                            icon: const Icon(Icons.add),
+                            label: Text('todo.subtasks.add'.tr),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (_subtasks.isEmpty)
+                        Text(
+                          'todo.subtasks.empty'.tr,
+                          style: theme.textTheme.bodyMedium,
+                        )
+                      else
+                        Column(
+                          children: _subtasks
+                              .map(
+                                (sub) => ListTile(
+                                  dense: true,
+                                  leading: Checkbox(
+                                    value: sub.isDone,
+                                    onChanged: (_) => _toggleSubtask(sub.id),
+                                  ),
+                                  title: Text(
+                                    sub.title.isEmpty
+                                        ? 'todo.subtasks.untitled'.tr
+                                        : sub.title,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    onPressed: () => _removeSubtask(sub.id),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text('form.cancel'.tr),
+                          ),
+                          const SizedBox(width: 12),
+                          FilledButton(
+                            key: TodoForm.saveButtonKey,
+                            onPressed: _isSubmitting ? null : _handleSubmit,
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  _getPriorityIcon(priority),
-                                  color: _getPriorityColor(priority),
+                                  widget.existing == null
+                                      ? Icons.add
+                                      : Icons.check,
                                   size: 20,
                                 ),
-                                const SizedBox(width: 12),
-                                Text(priority.label),
+                                const SizedBox(width: 8),
+                                Text(widget.existing == null
+                                    ? 'form.create'.tr
+                                    : 'form.save'.tr),
                               ],
                             ),
                           ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _priority = value;
-                      });
-                    },
-                    dropdownColor: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    'todo.subtasks'.tr,
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _subtaskController,
-                          decoration: InputDecoration(
-                            hintText: 'todo.subtasks.hint'.tr,
-                          ),
-                          onSubmitted: (_) => _addSubtask(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.icon(
-                        onPressed: _addSubtask,
-                        icon: const Icon(Icons.add),
-                        label: Text('todo.subtasks.add'.tr),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  if (_subtasks.isEmpty)
-                    Text(
-                      'todo.subtasks.empty'.tr,
-                      style: theme.textTheme.bodyMedium,
-                    )
-                  else
-                    Column(
-                      children: _subtasks
-                          .map(
-                            (sub) => ListTile(
-                              dense: true,
-                              leading: Checkbox(
-                                value: sub.isDone,
-                                onChanged: (_) => _toggleSubtask(sub.id),
-                              ),
-                              title: Text(
-                                sub.title.isEmpty
-                                    ? 'todo.subtasks.untitled'.tr
-                                    : sub.title,
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () => _removeSubtask(sub.id),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      OutlinedButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text('form.cancel'.tr),
-                      ),
-                      const SizedBox(width: 12),
-                      FilledButton(
-                        key: TodoForm.saveButtonKey,
-                        onPressed: _handleSubmit,
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              widget.existing == null ? Icons.add : Icons.check,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(widget.existing == null
-                                ? 'form.create'.tr
-                                : 'form.save'.tr),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
           ),
         ),
-      ),
+        if (_isSubmitting)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.25),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 12),
+                    Text('Saving task and uploading attachments...'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

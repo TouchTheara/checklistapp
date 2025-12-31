@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../data/models/todo.dart';
 import '../../../routes/app_routes.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class TodoListView extends StatelessWidget {
   const TodoListView({
@@ -82,219 +83,146 @@ class TodoCard extends StatelessWidget {
     final textTheme = theme.textTheme;
     final priorityColor = _priorityColor(theme.colorScheme, todo.priority);
 
-    if (isDashboard && todo.isCompleted) {
-      // Show title, priority chip and created date at bottom right with delete option
-      final priorityColor = _priorityColor(theme.colorScheme, todo.priority);
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          todo.title,
-                          style: textTheme.titleMedium?.copyWith(
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Chip(
-                          label: Text(todo.priority.label),
-                          backgroundColor: priorityColor.withAlpha(25),
-                          labelStyle: TextStyle(color: priorityColor),
-                          side: BorderSide(
-                            color: priorityColor.withAlpha(70),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<_TodoAction>(
-                    onSelected: (action) {
-                      switch (action) {
-                        case _TodoAction.edit:
-                          onEdit();
-                          break;
-                        case _TodoAction.delete:
-                          onDelete();
-                          break;
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(
-                        value: _TodoAction.delete,
-                        child: Text('Move to bin'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: todo.isCompleted
-                      ? const SizedBox.shrink()
-                      : Text(
-                          todo.updatedAt != null
-                              ? 'Updated ${_formatTimestamp(todo.updatedAt!)}'
-                              : 'Created ${_formatTimestamp(todo.createdAt)}',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.outline,
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return GestureDetector(
       onTap: onOpenDetail,
       child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
+                  ),
+                  child: SizedBox(
+                    height: 160,
+                    width: double.infinity,
+                    child: todo.attachments.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: todo.attachments.first,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                            ),
+                            errorWidget: (_, __, ___) => Container(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                          ),
+                  ),
+                ),
+                _TopActionsOverlay(
+                  onToggle: onToggle,
+                  completed: todo.isCompleted,
+                  onMenuSelect: (action) {
+                    switch (action) {
+                      case _TodoAction.edit:
+                        onEdit();
+                        break;
+                      case _TodoAction.delete:
+                        onDelete();
+                        break;
+                    }
+                  },
+                  isCompleted: todo.isCompleted,
+                  isDashboard: isDashboard,
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _AnimatedCheckButton(
-                    semanticsLabel: 'toggle_${todo.title}',
-                    value: todo.isCompleted,
-                    onChanged: onToggle,
+                  Text(
+                    todo.title.isEmpty ? 'Untitled task' : todo.title,
+                    style: textTheme.titleMedium?.copyWith(
+                      decoration: todo.isCompleted
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  if (todo.description != null &&
+                      todo.description!.trim().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        todo.description!,
+                        style: textTheme.bodyMedium,
+                      ),
+                    ),
+                  if ((todo.dueDate != null) ||
+                      (todo.category != null && todo.category!.isNotEmpty))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          if (todo.dueDate != null)
+                            Chip(
+                              visualDensity: VisualDensity.compact,
+                              avatar: const Icon(Icons.event, size: 18),
+                              label:
+                                  Text('Due ${_formatDueDate(todo.dueDate!)}'),
+                            ),
+                          if (todo.reminderAt != null)
+                            Chip(
+                              visualDensity: VisualDensity.compact,
+                              avatar: const Icon(Icons.alarm, size: 18),
+                              label: Text(
+                                  'Reminds ${_formatDueDate(todo.reminderAt!)}'),
+                            ),
+                          if (todo.category != null &&
+                              todo.category!.isNotEmpty)
+                            Chip(
+                              visualDensity: VisualDensity.compact,
+                              avatar: const Icon(Icons.folder_open, size: 18),
+                              label: Text(todo.category!),
+                            ),
+                        ],
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          todo.title.isEmpty ? 'Untitled task' : todo.title,
-                          style: textTheme.titleMedium?.copyWith(
-                            decoration: todo.isCompleted
-                                ? TextDecoration.lineThrough
-                                : TextDecoration.none,
+                        Chip(
+                          label: Text(todo.priority.label),
+                          backgroundColor: priorityColor.withValues(alpha: .1),
+                          labelStyle: TextStyle(color: priorityColor),
+                          side: BorderSide(
+                            color: priorityColor.withValues(alpha: .3),
                           ),
                         ),
-                        if (todo.description != null &&
-                            todo.description!.trim().isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              todo.description!,
-                              style: textTheme.bodyMedium,
-                            ),
-                          ),
+                        todo.isCompleted
+                            ? const SizedBox.shrink()
+                            : Text(
+                                todo.updatedAt != null
+                                    ? 'Updated ${_formatTimestamp(todo.updatedAt!)}'
+                                    : 'Created ${_formatTimestamp(todo.createdAt)}',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.outline,
+                                ),
+                              ),
                       ],
                     ),
                   ),
-                  PopupMenuButton<_TodoAction>(
-                    onSelected: (action) {
-                      switch (action) {
-                        case _TodoAction.edit:
-                          onEdit();
-                          break;
-                        case _TodoAction.delete:
-                          onDelete();
-                          break;
-                      }
-                    },
-                    itemBuilder: (_) {
-                      if (!isDashboard && todo.isCompleted) {
-                        // On done screen checked todo: only show Move to bin
-                        return const [
-                          PopupMenuItem(
-                            value: _TodoAction.delete,
-                            child: Text('Move to bin'),
-                          ),
-                        ];
-                      } else {
-                        return const [
-                          PopupMenuItem(
-                            value: _TodoAction.edit,
-                            child: Text('Edit'),
-                          ),
-                          PopupMenuItem(
-                            value: _TodoAction.delete,
-                            child: Text('Move to bin'),
-                          ),
-                        ];
-                      }
-                    },
-                  ),
+                  _buildProgress(context),
                 ],
               ),
-              if ((todo.dueDate != null) ||
-                  (todo.category != null && todo.category!.isNotEmpty))
-                Padding(
-                  padding: const EdgeInsets.only(top: 6, left: 8, right: 8),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      if (todo.dueDate != null)
-                        Chip(
-                          visualDensity: VisualDensity.compact,
-                          avatar: const Icon(Icons.event, size: 18),
-                          label: Text('Due ${_formatDueDate(todo.dueDate!)}'),
-                        ),
-                      if (todo.reminderAt != null)
-                        Chip(
-                          visualDensity: VisualDensity.compact,
-                          avatar: const Icon(Icons.alarm, size: 18),
-                          label: Text(
-                              'Reminds ${_formatDueDate(todo.reminderAt!)}'),
-                        ),
-                      if (todo.category != null && todo.category!.isNotEmpty)
-                        Chip(
-                          visualDensity: VisualDensity.compact,
-                          avatar: const Icon(Icons.folder_open, size: 18),
-                          label: Text(todo.category!),
-                        ),
-                    ],
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Chip(
-                      label: Text(todo.priority.label),
-                      backgroundColor: priorityColor.withValues(alpha: .1),
-                      labelStyle: TextStyle(color: priorityColor),
-                      side: BorderSide(
-                        color: priorityColor.withValues(alpha: .3),
-                      ),
-                    ),
-                    todo.isCompleted
-                        ? const SizedBox.shrink()
-                        : Text(
-                            todo.updatedAt != null
-                                ? 'Updated ${_formatTimestamp(todo.updatedAt!)}'
-                                : 'Created ${_formatTimestamp(todo.createdAt)}',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.outline,
-                            ),
-                          ),
-                  ],
-                ),
-              ),
-              _buildProgress(context),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -332,6 +260,45 @@ class TodoCard extends StatelessWidget {
             style: theme.textTheme.bodySmall,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAttachments(BuildContext context) {
+    if (todo.attachments.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: SizedBox(
+        height: 72,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemBuilder: (_, index) {
+            final url = todo.attachments[index];
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                  ),
+                  errorWidget: (_, __, ___) => Container(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemCount: todo.attachments.length,
+        ),
       ),
     );
   }
@@ -532,5 +499,75 @@ class _AnimatedCheckButtonState extends State<_AnimatedCheckButton>
     } else {
       _controller.reverse(from: 1.0);
     }
+  }
+}
+
+class _TopActionsOverlay extends StatelessWidget {
+  const _TopActionsOverlay({
+    required this.onToggle,
+    required this.completed,
+    required this.onMenuSelect,
+    required this.isCompleted,
+    required this.isDashboard,
+  });
+
+  final VoidCallback onToggle;
+  final bool completed;
+  final void Function(_TodoAction action) onMenuSelect;
+  final bool isCompleted;
+  final bool isDashboard;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Positioned.fill(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(6, 4, 2, 0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Material(
+              color: Colors.black45,
+              shape: const CircleBorder(),
+              child: IconButton(
+                icon: Icon(
+                  completed ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: Colors.white,
+                ),
+                onPressed: onToggle,
+                tooltip: 'toggle',
+              ),
+            ),
+            PopupMenuButton<_TodoAction>(
+              iconColor: Colors.white,
+              color: theme.colorScheme.surface,
+              onSelected: onMenuSelect,
+              itemBuilder: (_) {
+                if (!isDashboard && isCompleted) {
+                  return const [
+                    PopupMenuItem(
+                      value: _TodoAction.delete,
+                      child: Text('Move to bin'),
+                    ),
+                  ];
+                } else {
+                  return const [
+                    PopupMenuItem(
+                      value: _TodoAction.edit,
+                      child: Text('Edit'),
+                    ),
+                    PopupMenuItem(
+                      value: _TodoAction.delete,
+                      child: Text('Move to bin'),
+                    ),
+                  ];
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

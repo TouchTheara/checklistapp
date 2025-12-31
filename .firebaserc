@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "safelist-5b99d"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }

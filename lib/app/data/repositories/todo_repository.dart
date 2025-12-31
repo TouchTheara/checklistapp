@@ -1,5 +1,9 @@
-import 'package:get/get.dart';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:get/get.dart';
 
 import '../models/todo.dart';
 import '../services/storage_service.dart';
@@ -13,6 +17,9 @@ class TodoRepository extends GetxService {
   final RxList<Todo> _todos;
   final Rx<SortOption> _sortOption = SortOption.priorityHighFirst.obs;
   final _firestore = FirebaseFirestore.instance;
+  static const _bucket = 'safelist-5b99d.firebasestorage.app';
+  final FirebaseStorage _storage =
+      FirebaseStorage.instanceFor(app: Firebase.app(), bucket: _bucket);
   String? _userId;
 
   RxList<Todo> get rawTodos => _todos;
@@ -36,9 +43,7 @@ class TodoRepository extends GetxService {
             .doc(userId)
             .collection('todos')
             .get();
-        loaded = snapshot.docs
-            .map((doc) => Todo.fromJson(doc.data()))
-            .toList();
+        loaded = snapshot.docs.map((doc) => Todo.fromJson(doc.data())).toList();
       }
     } catch (_) {
       // ignore network errors, fallback to local
@@ -86,11 +91,13 @@ class TodoRepository extends GetxService {
     sorted.sort((a, b) {
       switch (_sortOption.value) {
         case SortOption.priorityHighFirst:
-          final priorityCompare = b.priority.weight.compareTo(a.priority.weight);
+          final priorityCompare =
+              b.priority.weight.compareTo(a.priority.weight);
           if (priorityCompare != 0) return priorityCompare;
           return a.createdAt.compareTo(b.createdAt);
         case SortOption.priorityLowFirst:
-          final priorityCompare = a.priority.weight.compareTo(b.priority.weight);
+          final priorityCompare =
+              a.priority.weight.compareTo(b.priority.weight);
           if (priorityCompare != 0) return priorityCompare;
           return a.createdAt.compareTo(b.createdAt);
         case SortOption.alphabetical:
@@ -128,8 +135,9 @@ class TodoRepository extends GetxService {
   }
 
   void addTodo(Todo todo) {
-    final nextOrder =
-        _todos.isEmpty ? 0 : (_todos.map((t) => t.order).reduce((a, b) => a > b ? a : b) + 1);
+    final nextOrder = _todos.isEmpty
+        ? 0
+        : (_todos.map((t) => t.order).reduce((a, b) => a > b ? a : b) + 1);
     _todos.add(todo.copyWith(
       isDeleted: false,
       deletedAt: null,
@@ -221,8 +229,8 @@ class TodoRepository extends GetxService {
         .toList();
     _todos[index] = current.copyWith(
       subtasks: updatedSubtasks,
-      isCompleted: updatedSubtasks.isNotEmpty &&
-          updatedSubtasks.every((s) => s.isDone),
+      isCompleted:
+          updatedSubtasks.isNotEmpty && updatedSubtasks.every((s) => s.isDone),
       updatedAt: DateTime.now(),
     );
     _todos.refresh();
@@ -251,23 +259,18 @@ class TodoRepository extends GetxService {
   }
 
   List<Todo> _normalized(List<Todo> todos) {
-    return todos
-        .asMap()
-        .entries
-        .map(
-          (entry) {
-            final todo = entry.value;
-            final normalizedOrder =
-                todo.order == 0 ? entry.key : todo.order;
-            return todo.copyWith(
-              isCompleted: todo.isCompleted ||
-                  (todo.subtasks.isNotEmpty &&
-                      todo.subtasks.every((sub) => sub.isDone)),
-              order: normalizedOrder,
-            );
-          },
-        )
-        .toList();
+    return todos.asMap().entries.map(
+      (entry) {
+        final todo = entry.value;
+        final normalizedOrder = todo.order == 0 ? entry.key : todo.order;
+        return todo.copyWith(
+          isCompleted: todo.isCompleted ||
+              (todo.subtasks.isNotEmpty &&
+                  todo.subtasks.every((sub) => sub.isDone)),
+          order: normalizedOrder,
+        );
+      },
+    ).toList();
   }
 
   List<Todo> get _activeTodos =>
@@ -286,7 +289,8 @@ class TodoRepository extends GetxService {
     if (_userId == null) return;
     try {
       final batch = _firestore.batch();
-      final col = _firestore.collection('users').doc(_userId).collection('todos');
+      final col =
+          _firestore.collection('users').doc(_userId).collection('todos');
       for (final todo in _todos) {
         final ref = col.doc(todo.id);
         batch.set(ref, todo.toJson(), SetOptions(merge: true));
@@ -294,6 +298,60 @@ class TodoRepository extends GetxService {
       await batch.commit();
     } catch (_) {
       // ignore sync failures in offline/test
+    }
+  }
+
+  Future<String?> uploadAttachment(String filePath,
+      {required String todoId}) async {
+    if (_userId == null) return null;
+    try {
+      final exists = await File(filePath).exists();
+      if (!exists) {
+        // ignore: avoid_print
+        print('Upload attachment failed: file missing at $filePath');
+        return null;
+      }
+      final file = File(filePath);
+      print('Upload attachment:  $file');
+      final fileName = file.uri.pathSegments.last;
+      final ref = _storage.ref().child(
+          'users/$_userId/todos/$todoId/attachments/${DateTime.now().millisecondsSinceEpoch}_$fileName');
+      print('Upload ref:  $ref');
+
+      final snapshot = await ref.putFile(file);
+      if (snapshot.state == TaskState.success) {
+        const retries = 5;
+        for (var i = 0; i < retries; i++) {
+          try {
+            return await snapshot.ref.getDownloadURL();
+          } on FirebaseException catch (e) {
+            if (e.code == 'object-not-found') {
+              await Future.delayed(Duration(milliseconds: 400 * (i + 1)));
+              continue;
+            } else {
+              // ignore: avoid_print
+              print(
+                  'Download URL failed (${e.code}) for ${snapshot.ref.fullPath} in ${snapshot.ref.bucket}: ${e.message}');
+              return null;
+            }
+          }
+        }
+        // ignore: avoid_print
+        print(
+            'Download URL failed after retries for ${snapshot.ref.fullPath} in ${snapshot.ref.bucket}');
+        return null;
+      }
+      // ignore: avoid_print
+      print('Upload not successful. State: ${snapshot.state}');
+      return null;
+    } on FirebaseException catch (e) {
+      // ignore: avoid_print
+      print('Upload attachment failed (${e.code}): ${e.message}');
+      return null;
+    } catch (e) {
+      // ignore: avoid_print
+      print('Upload attachment failed: $e');
+      return null;
     }
   }
 }
