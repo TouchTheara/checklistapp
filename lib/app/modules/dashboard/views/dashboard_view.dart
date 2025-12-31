@@ -22,6 +22,25 @@ class DashboardView extends GetView<DashboardController> {
       final canReorder = controller.sortOption == SortOption.manual &&
           !controller.urgentOnly &&
           controller.categories.isNotEmpty;
+      if (todos.isEmpty) {
+        return CustomScrollView(
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _FilterHeader(
+                child: _FilterBar(controller: controller),
+              ),
+            ),
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: _HomeEmptyState(),
+              ),
+            ),
+          ],
+        );
+      }
       return CustomScrollView(
         slivers: [
           SliverPersistentHeader(
@@ -254,6 +273,44 @@ class _FilterBar extends StatelessWidget {
         snackPosition: SnackPosition.BOTTOM,
       );
     }
+  }
+}
+
+class _HomeEmptyState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.primary.withOpacity(0.08),
+            ),
+            child: Icon(
+              Icons.fact_check_outlined,
+              size: 72,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'empty.title'.tr,
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'empty.desc'.tr,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
   }
 }
 

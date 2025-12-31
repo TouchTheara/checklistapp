@@ -110,6 +110,7 @@ class AppController extends GetxController {
   Future<void> logout() async {
     await _authService.logout();
     _loggedIn.value = false;
+    await _todoRepository.clearForLogout();
     await _syncUserData();
     _resetHomeTab();
   }

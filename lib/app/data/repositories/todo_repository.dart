@@ -32,6 +32,10 @@ class TodoRepository extends GetxService {
   }
 
   Future<void> loadForUser(String? userId) async {
+    // Clear in-memory list when switching accounts to avoid showing old data.
+    if (_userId != null && _userId != userId) {
+      _todos.clear();
+    }
     _userId = userId;
     _storageService.setUser(userId);
     final hasData = await _storageService.hasSavedData();
@@ -199,7 +203,15 @@ class TodoRepository extends GetxService {
     if (index == -1) return;
     final current = _todos[index];
     if (current.isDeleted) return;
-    _todos[index] = current.copyWith(isCompleted: !current.isCompleted);
+    final toggled = !current.isCompleted;
+    final updatedSubtasks = current.subtasks
+        .map((s) => s.copyWith(isDone: toggled))
+        .toList();
+    _todos[index] = current.copyWith(
+      isCompleted: toggled,
+      subtasks: updatedSubtasks,
+      updatedAt: DateTime.now(),
+    );
     _todos.refresh();
     _saveTodos();
   }
@@ -283,6 +295,12 @@ class TodoRepository extends GetxService {
 
   Future<void> _saveSortOption() async {
     await _storageService.saveSortOption(_sortOption.value);
+  }
+
+  Future<void> clearForLogout() async {
+    _userId = null;
+    _todos.clear();
+    await _storageService.clearAll();
   }
 
   Future<void> _syncToFirestore() async {

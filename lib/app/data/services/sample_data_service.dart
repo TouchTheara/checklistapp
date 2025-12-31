@@ -25,31 +25,7 @@ class SampleDataService extends GetxService {
         'notificationsEnabled': true,
       });
     }
-    final col = _firestore.collection('users').doc(uid).collection('todos');
-
-    final exists = await col.limit(1).get();
-    if (exists.docs.isNotEmpty) return;
-
-    final now = DateTime.now();
-    final tasks = [
-      Todo.create(
-        title: 'Site safety walk',
-        description: 'Inspect scaffolding and PPE compliance',
-        priority: TodoPriority.high,
-        dueDate: now.add(const Duration(days: 1)),
-      ),
-      Todo.create(
-        title: 'Quality punch list',
-        description: 'Close open punch items with subs',
-        priority: TodoPriority.medium,
-      ),
-    ];
-
-    final batch = _firestore.batch();
-    for (final t in tasks) {
-      batch.set(col.doc(t.id), t.toJson());
-    }
-    await batch.commit();
+    // No default tasks are created anymore for new users.
   }
 
   String _buildHandle(String name, String uid) {

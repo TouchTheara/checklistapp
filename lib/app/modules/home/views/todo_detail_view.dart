@@ -20,113 +20,253 @@ class TodoDetailView extends GetView<HomeController> {
         );
       }
       final theme = Theme.of(context);
+      final allSubtasksDone =
+          todo.subtasks.isNotEmpty && todo.subtasks.every((s) => s.isDone);
+      // Consider the task done if it is explicitly marked done OR all subtasks are done.
+      final taskDone = todo.isCompleted || allSubtasksDone;
       return Scaffold(
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => _addSubtask(context),
           icon: const Icon(Icons.add_task),
           label: Text('todo.subtasks.add'.tr),
         ),
-        body: ListView(
-          padding: EdgeInsets.zero,
+        body: Stack(
           children: [
-            _HeaderImage(
-              title: todo.title.isEmpty ? 'Untitled task' : todo.title,
-              imageUrl: todo.attachments.isNotEmpty ? todo.attachments.first : null,
-              completed: todo.completedSubtasks == todo.totalSubtasks &&
-                  todo.totalSubtasks > 0,
-              onBack: () => Get.back(),
-              onToggleAll: () {
-                if (todo.subtasks.isEmpty) {
-                  controller.toggleCompleted(todo.id);
-                } else {
-                  for (final sub in todo.subtasks) {
-                    if (!sub.isDone) {
-                      controller.toggleSubtask(todo.id, sub.id);
-                    }
-                  }
-                }
-              },
+            // Sticky top controls
+            SafeArea(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  children: [
+                    // Material(
+                    //   color: Colors.black45,
+                    //   shape: const CircleBorder(),
+                    //   child: IconButton(
+                    //     icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    //     onPressed: () => Get.back(),
+                    //   ),
+                    // ),
+                    // const SizedBox(width: 12),
+                    // Expanded(
+                    //   child: Text(
+                    //     todo.title.isEmpty ? 'Untitled task' : todo.title,
+                    //     maxLines: 2,
+                    //     overflow: TextOverflow.ellipsis,
+                    //     textAlign: TextAlign.center,
+                    //     style: theme.textTheme.titleLarge?.copyWith(
+                    //       color: Colors.white,
+                    //       shadows: const [
+                    //         Shadow(
+                    //           offset: Offset(0, 1),
+                    //           blurRadius: 4,
+                    //           color: Colors.black45,
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
+                    // const SizedBox(width: 12),
+                    // Material(
+                    //   color: Colors.black45,
+                    //   shape: const CircleBorder(),
+                    //   child: IconButton(
+                    //     icon: Icon(
+                    //       todo.completedSubtasks == todo.totalSubtasks &&
+                    //               todo.totalSubtasks > 0
+                    //           ? Icons.check_circle
+                    //           : Icons.task_alt_outlined,
+                    //       color: Colors.white,
+                    //     ),
+                    //     tooltip: 'Mark all sub-tasks done',
+                    //     onPressed: () {
+                    //       if (todo.subtasks.isEmpty) {
+                    //         controller.toggleCompleted(todo.id);
+                    //       } else {
+                    //         for (final sub in todo.subtasks) {
+                    //           if (!sub.isDone) {
+                    //             controller.toggleSubtask(todo.id, sub.id);
+                    //           }
+                    //         }
+                    //       }
+                    //     },
+                    //   ),
+                    // ),
+                  ],
+                ),
+              ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
+            // Scrollable content
+            ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                _HeaderImage(
+                  title: todo.title.isEmpty ? 'Untitled task' : todo.title,
+                  imageUrl: todo.attachments.isNotEmpty
+                      ? todo.attachments.first
+                      : null,
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Chip(
-                        avatar: const Icon(Icons.flag_outlined, size: 18),
-                        label: Text(todo.priority.label),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          Chip(
+                            avatar: const Icon(Icons.flag_outlined, size: 18),
+                            label: Text(todo.priority.label),
+                          ),
+                          if (todo.dueDate != null)
+                            Chip(
+                              avatar: const Icon(Icons.event, size: 18),
+                              label: Text('Due ${_formatDate(todo.dueDate!)}'),
+                            ),
+                          if (todo.reminderAt != null)
+                            Chip(
+                              avatar: const Icon(Icons.alarm, size: 18),
+                              label: Text(
+                                  'Reminder ${_formatDate(todo.reminderAt!)}'),
+                            ),
+                          if (todo.category != null &&
+                              todo.category!.isNotEmpty)
+                            Chip(
+                              avatar: const Icon(Icons.folder_open, size: 18),
+                              label: Text(todo.category!),
+                            ),
+                        ],
                       ),
-                      if (todo.dueDate != null)
-                        Chip(
-                          avatar: const Icon(Icons.event, size: 18),
-                          label: Text('Due ${_formatDate(todo.dueDate!)}'),
+                      if (todo.description != null &&
+                          todo.description!.trim().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: _ExpandableDescription(
+                            text: todo.description!,
+                            style: theme.textTheme.bodyMedium,
+                          ),
                         ),
-                      if (todo.reminderAt != null)
-                        Chip(
-                          avatar: const Icon(Icons.alarm, size: 18),
-                          label: Text('Reminder ${_formatDate(todo.reminderAt!)}'),
-                        ),
-                      if (todo.category != null && todo.category!.isNotEmpty)
-                        Chip(
-                          avatar: const Icon(Icons.folder_open, size: 18),
-                          label: Text(todo.category!),
+                      const SizedBox(height: 12),
+                      LinearProgressIndicator(
+                        value: todo.progress,
+                        backgroundColor:
+                            theme.colorScheme.surfaceContainerHighest,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'todo.subtasks.progress'.trParams({
+                          'done': '${todo.completedSubtasks}',
+                          'total': '${todo.totalSubtasks}',
+                        }),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Sub-tasks',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      if (todo.subtasks.isEmpty)
+                        Text(
+                          'todo.subtasks.empty'.tr,
+                          style: theme.textTheme.bodyMedium,
+                        )
+                      else
+                        ...todo.subtasks.map(
+                          (sub) => Card(
+                            child: ListTile(
+                              title: Text(
+                                  sub.title.isEmpty ? 'Untitled' : sub.title),
+                              trailing: Checkbox(
+                                value: sub.isDone,
+                                shape: const CircleBorder(),
+                                onChanged: (_) =>
+                                    controller.toggleSubtask(todo.id, sub.id),
+                              ),
+                              onTap: () =>
+                                  controller.toggleSubtask(todo.id, sub.id),
+                            ),
+                          ),
                         ),
                     ],
                   ),
-                  if (todo.description != null &&
-                      todo.description!.trim().isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        todo.description!,
-                        style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+
+            SafeArea(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Material(
+                      color: Colors.black45,
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () {
+                          Get.back();
+                        },
                       ),
                     ),
-                  const SizedBox(height: 12),
-                  LinearProgressIndicator(
-                    value: todo.progress,
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'todo.subtasks.progress'.trParams({
-                      'done': '${todo.completedSubtasks}',
-                      'total': '${todo.totalSubtasks}',
-                    }),
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Sub-tasks',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  if (todo.subtasks.isEmpty)
-                    Text(
-                      'todo.subtasks.empty'.tr,
-                      style: theme.textTheme.bodyMedium,
-                    )
-                  else
-                    ...todo.subtasks.map(
-                      (sub) => Card(
-                        child: ListTile(
-                          title: Text(sub.title.isEmpty ? 'Untitled' : sub.title),
-                          trailing: Checkbox(
-                            value: sub.isDone,
-                            shape: const CircleBorder(),
-                            onChanged: (_) =>
-                                controller.toggleSubtask(todo.id, sub.id),
-                          ),
-                          onTap: () =>
-                              controller.toggleSubtask(todo.id, sub.id),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        todo.title.isEmpty ? 'Untitled task' : todo.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          shadows: const [
+                            Shadow(
+                              offset: Offset(0, 1),
+                              blurRadius: 4,
+                              color: Colors.black45,
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                ],
+                    const SizedBox(width: 12),
+                    Material(
+                      color: Colors.black45,
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        icon: Icon(
+                          taskDone
+                              ? Icons.check_circle
+                              : Icons.task_alt_outlined,
+                          color: Colors.white,
+                      ),
+                      tooltip: 'Mark all sub-tasks done',
+                      onPressed: () {
+                        if (todo.subtasks.isEmpty) {
+                          controller.toggleCompleted(todo.id);
+                        } else {
+                          if (allSubtasksDone) {
+                            // Uncheck all
+                            for (final sub
+                                in todo.subtasks.where((s) => s.isDone)) {
+                              controller.toggleSubtask(todo.id, sub.id);
+                            }
+                          } else if (todo.isCompleted && !allSubtasksDone) {
+                            controller.toggleCompleted(todo.id);
+                          } else {
+                            // Mark all done
+                            for (final sub
+                                in todo.subtasks.where((s) => !s.isDone)) {
+                              controller.toggleSubtask(todo.id, sub.id);
+                            }
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -155,8 +295,7 @@ class TodoDetailView extends GetView<HomeController> {
             child: Text('form.cancel'.tr),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.of(ctx).pop(textController.text.trim()),
+            onPressed: () => Navigator.of(ctx).pop(textController.text.trim()),
             child: Text('form.save'.tr),
           ),
         ],
@@ -172,20 +311,68 @@ class TodoDetailView extends GetView<HomeController> {
   }
 }
 
+class _ExpandableDescription extends StatefulWidget {
+  const _ExpandableDescription({
+    required this.text,
+    this.style,
+  });
+
+  final String text;
+  final TextStyle? style;
+
+  @override
+  State<_ExpandableDescription> createState() => _ExpandableDescriptionState();
+}
+
+class _ExpandableDescriptionState extends State<_ExpandableDescription>
+    with SingleTickerProviderStateMixin {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final text = widget.text.trim();
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeInOut,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            text,
+            style: widget.style,
+            maxLines: _expanded ? null : 3,
+            overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+          ),
+          if (text.split('\n').length > 1 || text.length > 120)
+            TextButton(
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => setState(() => _expanded = !_expanded),
+              child: Text(
+                _expanded ? 'form.less'.tr : 'form.more'.tr,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HeaderImage extends StatelessWidget {
   const _HeaderImage({
     required this.title,
     required this.imageUrl,
-    required this.completed,
-    required this.onBack,
-    required this.onToggleAll,
   });
 
   final String title;
   final String? imageUrl;
-  final bool completed;
-  final VoidCallback onBack;
-  final VoidCallback onToggleAll;
 
   @override
   Widget build(BuildContext context) {
@@ -219,58 +406,6 @@ class _HeaderImage extends StatelessWidget {
                 colors: [Colors.black54, Colors.transparent],
                 begin: Alignment.topCenter,
                 end: Alignment.center,
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Material(
-                    color: Colors.black45,
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: onBack,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        shadows: const [
-                          Shadow(
-                            offset: Offset(0, 1),
-                            blurRadius: 4,
-                            color: Colors.black45,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Material(
-                    color: Colors.black45,
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      icon: Icon(
-                        completed
-                            ? Icons.check_circle
-                            : Icons.task_alt_outlined,
-                        color: Colors.white,
-                      ),
-                      tooltip: 'Mark all sub-tasks done',
-                      onPressed: onToggleAll,
-                    ),
-                  ),
-                ],
               ),
             ),
           ),

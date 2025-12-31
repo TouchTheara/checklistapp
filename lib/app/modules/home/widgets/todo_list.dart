@@ -157,6 +157,8 @@ class TodoCard extends StatelessWidget {
                       child: Text(
                         todo.description!,
                         style: textTheme.bodyMedium,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   if ((todo.dueDate != null) ||
