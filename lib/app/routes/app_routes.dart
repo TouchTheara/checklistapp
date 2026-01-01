@@ -6,4 +6,5 @@ abstract class Routes {
   static const todoDetail = '/todo';
   static const support = '/support';
   static const terms = '/terms';
+  static const search = '/search';
 }

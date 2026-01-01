@@ -121,7 +121,8 @@ class _FilterBar extends StatelessWidget {
               isDense: true,
               filled: true,
             ),
-            onChanged: controller.updateSearch,
+            readOnly: true,
+            onTap: () => Get.toNamed(Routes.search),
           ),
           const SizedBox(height: 8),
           Row(

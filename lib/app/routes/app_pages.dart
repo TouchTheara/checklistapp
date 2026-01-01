@@ -9,6 +9,8 @@ import '../modules/legal/views/terms_privacy_view.dart';
 import '../modules/onboarding/views/onboarding_view.dart';
 import '../modules/onboarding/views/language_select_view.dart';
 import '../modules/support/views/support_view.dart';
+import '../modules/search/bindings/search_binding.dart';
+import '../modules/search/views/search_view.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -44,6 +46,13 @@ class AppPages {
         return TodoDetailView(todoId: todoId);
       },
       binding: HomeBinding(),
+    ),
+    GetPage(
+      name: Routes.search,
+      page: () => const SearchView(),
+      bindings: [
+        SearchBinding(),
+      ],
     ),
     GetPage(
       name: Routes.support,
