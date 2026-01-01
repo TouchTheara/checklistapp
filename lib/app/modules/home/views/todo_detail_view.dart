@@ -38,61 +38,7 @@ class TodoDetailView extends GetView<HomeController> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Row(
-                  children: [
-                    // Material(
-                    //   color: Colors.black45,
-                    //   shape: const CircleBorder(),
-                    //   child: IconButton(
-                    //     icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    //     onPressed: () => Get.back(),
-                    //   ),
-                    // ),
-                    // const SizedBox(width: 12),
-                    // Expanded(
-                    //   child: Text(
-                    //     todo.title.isEmpty ? 'Untitled task' : todo.title,
-                    //     maxLines: 2,
-                    //     overflow: TextOverflow.ellipsis,
-                    //     textAlign: TextAlign.center,
-                    //     style: theme.textTheme.titleLarge?.copyWith(
-                    //       color: Colors.white,
-                    //       shadows: const [
-                    //         Shadow(
-                    //           offset: Offset(0, 1),
-                    //           blurRadius: 4,
-                    //           color: Colors.black45,
-                    //         ),
-                    //       ],
-                    //     ),
-                    //   ),
-                    // ),
-                    // const SizedBox(width: 12),
-                    // Material(
-                    //   color: Colors.black45,
-                    //   shape: const CircleBorder(),
-                    //   child: IconButton(
-                    //     icon: Icon(
-                    //       todo.completedSubtasks == todo.totalSubtasks &&
-                    //               todo.totalSubtasks > 0
-                    //           ? Icons.check_circle
-                    //           : Icons.task_alt_outlined,
-                    //       color: Colors.white,
-                    //     ),
-                    //     tooltip: 'Mark all sub-tasks done',
-                    //     onPressed: () {
-                    //       if (todo.subtasks.isEmpty) {
-                    //         controller.toggleCompleted(todo.id);
-                    //       } else {
-                    //         for (final sub in todo.subtasks) {
-                    //           if (!sub.isDone) {
-                    //             controller.toggleSubtask(todo.id, sub.id);
-                    //           }
-                    //         }
-                    //       }
-                    //     },
-                    //   ),
-                    // ),
-                  ],
+                  children: [],
                 ),
               ),
             ),
@@ -102,9 +48,8 @@ class TodoDetailView extends GetView<HomeController> {
               children: [
                 _HeaderImage(
                   title: todo.title.isEmpty ? 'Untitled task' : todo.title,
-                  imageUrl: todo.attachments.isNotEmpty
-                      ? todo.attachments.first
-                      : null,
+                  attachments:
+                      todo.attachments.isNotEmpty ? todo.attachments : [],
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -240,31 +185,31 @@ class TodoDetailView extends GetView<HomeController> {
                               ? Icons.check_circle
                               : Icons.task_alt_outlined,
                           color: Colors.white,
-                      ),
-                      tooltip: 'Mark all sub-tasks done',
-                      onPressed: () {
-                        if (todo.subtasks.isEmpty) {
-                          controller.toggleCompleted(todo.id);
-                        } else {
-                          if (allSubtasksDone) {
-                            // Uncheck all
-                            for (final sub
-                                in todo.subtasks.where((s) => s.isDone)) {
-                              controller.toggleSubtask(todo.id, sub.id);
-                            }
-                          } else if (todo.isCompleted && !allSubtasksDone) {
+                        ),
+                        tooltip: 'Mark all sub-tasks done',
+                        onPressed: () {
+                          if (todo.subtasks.isEmpty) {
                             controller.toggleCompleted(todo.id);
                           } else {
-                            // Mark all done
-                            for (final sub
-                                in todo.subtasks.where((s) => !s.isDone)) {
-                              controller.toggleSubtask(todo.id, sub.id);
+                            if (allSubtasksDone) {
+                              // Uncheck all
+                              for (final sub
+                                  in todo.subtasks.where((s) => s.isDone)) {
+                                controller.toggleSubtask(todo.id, sub.id);
+                              }
+                            } else if (todo.isCompleted && !allSubtasksDone) {
+                              controller.toggleCompleted(todo.id);
+                            } else {
+                              // Mark all done
+                              for (final sub
+                                  in todo.subtasks.where((s) => !s.isDone)) {
+                                controller.toggleSubtask(todo.id, sub.id);
+                              }
                             }
                           }
-                        }
-                      },
+                        },
+                      ),
                     ),
-                  ),
                   ],
                 ),
               ),
@@ -365,50 +310,110 @@ class _ExpandableDescriptionState extends State<_ExpandableDescription>
   }
 }
 
-class _HeaderImage extends StatelessWidget {
+class _HeaderImage extends StatefulWidget {
   const _HeaderImage({
     required this.title,
-    required this.imageUrl,
+    required this.attachments,
   });
 
   final String title;
-  final String? imageUrl;
+  final List<String> attachments;
+
+  @override
+  State<_HeaderImage> createState() => _HeaderImageState();
+}
+
+class _HeaderImageState extends State<_HeaderImage> {
+  late final PageController _pageController;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasImages = widget.attachments.isNotEmpty;
+    final total = widget.attachments.length;
     return SizedBox(
       height: 300,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (imageUrl != null)
-            CachedNetworkImage(
-              imageUrl: imageUrl!,
-              fit: BoxFit.cover,
-              placeholder: (_, __) =>
-                  Container(color: theme.colorScheme.surfaceContainerHighest),
-              errorWidget: (_, __, ___) => Container(
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: Icon(
-                  Icons.broken_image_outlined,
-                  color: theme.colorScheme.outline,
-                ),
-              ),
+          if (hasImages)
+            PageView.builder(
+              controller: _pageController,
+              itemCount: widget.attachments.length,
+              physics: const BouncingScrollPhysics(),
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (_, index) {
+                final url = widget.attachments[index];
+                return CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                  ),
+                  errorWidget: (_, __, ___) => Container(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                );
+              },
             )
           else
             Container(
               color: theme.colorScheme.surfaceContainerHighest,
             ),
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.black54, Colors.transparent],
-                begin: Alignment.topCenter,
-                end: Alignment.center,
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.black54, Colors.transparent],
+                    begin: Alignment.topCenter,
+                    end: Alignment.center,
+                  ),
+                ),
               ),
             ),
           ),
+          if (hasImages)
+            Positioned(
+              bottom: 12,
+              left: 0,
+              right: 10,
+              child: Align(
+                alignment: AlignmentGeometry.bottomRight,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_page + 1}/$total',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

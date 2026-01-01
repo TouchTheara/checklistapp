@@ -22,25 +22,6 @@ class DashboardView extends GetView<DashboardController> {
       final canReorder = controller.sortOption == SortOption.manual &&
           !controller.urgentOnly &&
           controller.categories.isNotEmpty;
-      if (todos.isEmpty) {
-        return CustomScrollView(
-          slivers: [
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _FilterHeader(
-                child: _FilterBar(controller: controller),
-              ),
-            ),
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: _HomeEmptyState(),
-              ),
-            ),
-          ],
-        );
-      }
       return CustomScrollView(
         slivers: [
           SliverPersistentHeader(
@@ -61,7 +42,14 @@ class DashboardView extends GetView<DashboardController> {
               ),
             ),
           ),
-          if (canReorder)
+          if (todos.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: _HomeEmptyState(),
+              ),
+            )
+          else if (canReorder)
             SliverReorderableList(
               itemCount: todos.length,
               onReorder: controller.reorder,

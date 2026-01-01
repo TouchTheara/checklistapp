@@ -134,6 +134,8 @@ class _BinItemCard extends StatelessWidget {
                 child: Text(
                   todo.description!,
                   style: theme.textTheme.bodyMedium,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             Padding(
