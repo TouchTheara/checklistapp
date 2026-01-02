@@ -45,7 +45,7 @@ class TodoDetailView extends GetView<HomeController> {
             ),
             // Scrollable content
             ListView(
-              padding: EdgeInsets.zero,
+              padding: EdgeInsets.only(bottom: 100),
               children: [
                 _HeaderImage(
                   title: todo.title.isEmpty ? 'Untitled task' : todo.title,
@@ -124,41 +124,47 @@ class TodoDetailView extends GetView<HomeController> {
                         )
                       else
                         Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: todo.members
-                            .map(
-                              (m) => Chip(
-                                label: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      m.name,
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(fontWeight: FontWeight.w600),
-                                    ),
-                                    Text(
-                                      m.email,
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                    if (m.status != InviteStatus.accepted)
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: todo.members
+                              .map(
+                                (m) => Chip(
+                                  label: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
                                       Text(
-                                        m.status.label,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: m.status == InviteStatus.cancelled
-                                              ? theme.colorScheme.error
-                                              : theme.colorScheme.primary,
-                                        ),
+                                        m.name,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                                fontWeight: FontWeight.w600),
                                       ),
-                                  ],
+                                      Text(
+                                        m.email,
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                      if (m.status != InviteStatus.accepted)
+                                        Text(
+                                          m.status.label,
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                            color: m.status ==
+                                                    InviteStatus.cancelled
+                                                ? theme.colorScheme.error
+                                                : theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  deleteIcon:
+                                      const Icon(Icons.person_remove_alt_1),
+                                  onDeleted: () =>
+                                      controller.removeMember(todo.id, m.id),
                                 ),
-                                deleteIcon: const Icon(Icons.person_remove_alt_1),
-                                onDeleted: () => controller.removeMember(todo.id, m.id),
-                              ),
-                            )
-                            .toList(),
-                      ),
+                              )
+                              .toList(),
+                        ),
                       const SizedBox(height: 12),
                       LinearProgressIndicator(
                         value: todo.progress,
@@ -190,65 +196,78 @@ class TodoDetailView extends GetView<HomeController> {
                               ? null
                               : (() {
                                   final found = todo.members
-                                      .where((m) => m.id == sub.assignedMemberId)
+                                      .where(
+                                          (m) => m.id == sub.assignedMemberId)
                                       .toList();
                                   return found.isNotEmpty ? found.first : null;
                                 })();
                           return Card(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Checkbox(
                                     value: sub.isDone,
                                     shape: const CircleBorder(),
-                                    onChanged: (_) =>
-                                        controller.toggleSubtask(todo.id, sub.id),
+                                    onChanged: (_) => controller.toggleSubtask(
+                                        todo.id, sub.id),
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          sub.title.isEmpty ? 'Untitled' : sub.title,
+                                          sub.title.isEmpty
+                                              ? 'Untitled'
+                                              : sub.title,
                                           style: theme.textTheme.bodyLarge,
                                         ),
                                         Text(
                                           assignedMember == null
                                               ? 'Unassigned'
                                               : 'Assigned to ${assignedMember.name}',
-                                          style: theme.textTheme.bodySmall,
+                                          style: theme.textTheme.bodySmall!
+                                              .copyWith(
+                                                  color:
+                                                      theme.colorScheme.outline,
+                                                  fontSize: 11),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  if (todo.members.isNotEmpty)
+                                  if (todo.members.isNotEmpty ||
+                                      sub.assignedMemberId != null)
                                     DropdownButtonHideUnderline(
                                       child: SizedBox(
                                         width: 150,
                                         child: DropdownButton<String?>(
                                           isExpanded: true,
                                           value: sub.assignedMemberId != null &&
-                                                  todo.members.any(
-                                                      (m) => m.id == sub.assignedMemberId)
+                                                  todo.members.any((m) =>
+                                                      m.id ==
+                                                      sub.assignedMemberId)
                                               ? sub.assignedMemberId
                                               : null,
                                           hint: const Text('Assign'),
-                                          items: [
-                                            const DropdownMenuItem(
-                                              value: null,
-                                              child: Text('Unassigned'),
-                                            ),
-                                            ...todo.members.map(
-                                              (m) => DropdownMenuItem(
-                                                value: m.id,
-                                                child: Text(m.name),
-                                              ),
-                                            ),
-                                          ],
-                                          onChanged: (val) => controller.assignSubtask(
+                                          items: todo.members
+                                              .map(
+                                                (m) => DropdownMenuItem(
+                                                  value: m.id,
+                                                  child: Text(
+                                                    m.name,
+                                                    style: theme
+                                                        .textTheme.bodyMedium!
+                                                        .copyWith(fontSize: 13),
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
+                                          onChanged: (val) =>
+                                              controller.assignSubtask(
                                             todo.id,
                                             sub.id,
                                             val,
@@ -388,7 +407,6 @@ class TodoDetailView extends GetView<HomeController> {
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
-
 }
 
 class _UserPickerDialog extends StatefulWidget {
@@ -429,9 +447,7 @@ class _UserPickerDialogState extends State<_UserPickerDialog> {
         base = FirebaseFirestore.instance
             .collection('users')
             .orderBy('email')
-            .startAt([q])
-            .endAt(['$q\uf8ff'])
-            .limit(50);
+            .startAt([q]).endAt(['$q\uf8ff']).limit(50);
       }
       final snap = await base.get();
       _all = snap.docs
@@ -495,11 +511,13 @@ class _UserPickerDialogState extends State<_UserPickerDialog> {
                             )
                           : ListView.separated(
                               itemCount: users.length,
-                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 1),
                               itemBuilder: (_, index) {
                                 final u = users[index];
                                 return ListTile(
-                                  title: Text(u.name.isEmpty ? u.email : u.name),
+                                  title:
+                                      Text(u.name.isEmpty ? u.email : u.name),
                                   subtitle:
                                       u.email.isEmpty ? null : Text(u.email),
                                   onTap: () => Navigator.of(context).pop(u),
