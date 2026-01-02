@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../data/models/todo.dart';
@@ -38,6 +39,9 @@ class _TodoFormState extends State<TodoForm> {
   late List<SubTask> _subtasks;
   late List<String> _attachments; // existing remote URLs
   late List<String> _localAttachments; // local file paths pending upload
+  late List<TaskMember> _members;
+  final _memberNameController = TextEditingController();
+  final _memberEmailController = TextEditingController();
   bool _isSubmitting = false;
   late final String _todoId;
 
@@ -55,6 +59,7 @@ class _TodoFormState extends State<TodoForm> {
     _subtasks = widget.existing?.subtasks.toList() ?? [];
     _attachments = widget.existing?.attachments.toList() ?? [];
     _localAttachments = [];
+    _members = widget.existing?.members.toList() ?? [];
   }
 
   @override
@@ -63,6 +68,8 @@ class _TodoFormState extends State<TodoForm> {
     _descriptionController.dispose();
     _subtaskController.dispose();
     _categoryController.dispose();
+    _memberNameController.dispose();
+    _memberEmailController.dispose();
     super.dispose();
   }
 
@@ -91,6 +98,7 @@ class _TodoFormState extends State<TodoForm> {
             reminderAt: _reminderAt,
             attachments: _attachments,
             subtasks: _subtasks,
+            members: _members,
           )
         : widget.existing!.copyWith(
             title: title,
@@ -101,6 +109,7 @@ class _TodoFormState extends State<TodoForm> {
             reminderAt: _reminderAt,
             attachments: _attachments,
             subtasks: _subtasks,
+            members: _members,
           );
 
     if (widget.existing == null) {
@@ -149,6 +158,50 @@ class _TodoFormState extends State<TodoForm> {
     setState(() {
       _subtasks.removeWhere((sub) => sub.id == id);
     });
+  }
+
+  void _updateSubtaskAssignee(String id, String? memberId) {
+    setState(() {
+      _subtasks = _subtasks
+          .map((sub) => sub.id == id
+              ? sub.copyWith(assignedMemberId: memberId)
+              : sub)
+          .toList();
+    });
+  }
+
+  void _addMember() {
+    final name = _memberNameController.text.trim();
+    final email = _memberEmailController.text.trim();
+    if (name.isEmpty && email.isEmpty) return;
+    final resolvedName = name.isEmpty ? email : name;
+    setState(() {
+      _members.add(TaskMember(name: resolvedName, email: email));
+      _memberNameController.clear();
+      _memberEmailController.clear();
+    });
+  }
+
+  void _removeMember(String id) {
+    setState(() {
+      _members.removeWhere((m) => m.id == id);
+      _subtasks = _subtasks
+          .map((s) =>
+              s.assignedMemberId == id ? s.copyWith(assignedMemberId: null) : s)
+          .toList();
+    });
+  }
+
+  Future<void> _pickExistingUser() async {
+    final selected = await showDialog<TaskMember>(
+      context: context,
+      builder: (ctx) => _UserPickerDialog(),
+    );
+    if (selected != null) {
+      setState(() {
+        _members.add(selected);
+      });
+    }
   }
 
   Color _getPriorityColor(TodoPriority priority) {
@@ -569,7 +622,79 @@ class _TodoFormState extends State<TodoForm> {
                         dropdownColor: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Members',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _memberNameController,
+                              decoration: const InputDecoration(
+                                hintText: 'Member name (username)',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _memberEmailController,
+                              decoration: const InputDecoration(
+                                hintText: 'Member email',
+                              ),
+                              keyboardType: TextInputType.emailAddress,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: _addMember,
+                      child: const Icon(Icons.person_add_alt),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filledTonal(
+                      tooltip: 'Find users',
+                      onPressed: _pickExistingUser,
+                      icon: const Icon(Icons.search),
+                    ),
+                  ],
+                ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _members
+                            .map(
+                              (m) => Chip(
+                                label: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      m.name,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w600),
+                                    ),
+                                    Text(
+                                      m.email,
+                                      style: theme.textTheme.bodySmall,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                                onDeleted: () => _removeMember(m.id),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'todo.subtasks'.tr,
+                        style: theme.textTheme.titleMedium,
+                      ),
                       Text(
                         'todo.subtasks'.tr,
                         style: theme.textTheme.titleMedium,
@@ -616,6 +741,29 @@ class _TodoFormState extends State<TodoForm> {
                                         : sub.title,
                                     style: theme.textTheme.bodyMedium,
                                   ),
+                                  subtitle: _members.isEmpty
+                                      ? null
+                                      : DropdownButton<String?>(
+                                          value: sub.assignedMemberId,
+                                          isExpanded: true,
+                                          hint: const Text('Assign to member'),
+                                          items: [
+                                            const DropdownMenuItem(
+                                              value: null,
+                                              child: Text('Unassigned'),
+                                            ),
+                                            ..._members.map(
+                                              (m) => DropdownMenuItem(
+                                                value: m.id,
+                                                child: Text(m.name),
+                                              ),
+                                            ),
+                                          ],
+                                          onChanged: (val) => _updateSubtaskAssignee(
+                                            sub.id,
+                                            val,
+                                          ),
+                                        ),
                                   trailing: IconButton(
                                     icon: const Icon(Icons.delete_outline),
                                     onPressed: () => _removeSubtask(sub.id),
@@ -699,6 +847,139 @@ class _TodoFormState extends State<TodoForm> {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+class _UserPickerDialog extends StatefulWidget {
+  const _UserPickerDialog();
+
+  @override
+  State<_UserPickerDialog> createState() => _UserPickerDialogState();
+}
+
+class _UserPickerDialogState extends State<_UserPickerDialog> {
+  final TextEditingController _searchController = TextEditingController();
+  List<TaskMember> _all = [];
+  bool _loading = true;
+  bool _error = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsers();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUsers([String query = '']) async {
+    try {
+      setState(() {
+        _loading = true;
+        _error = false;
+      });
+      Query<Map<String, dynamic>> base =
+          FirebaseFirestore.instance.collection('users').limit(50);
+      final q = query.trim();
+      if (q.isNotEmpty) {
+        // simple prefix search on email
+        base = FirebaseFirestore.instance
+            .collection('users')
+            .orderBy('email')
+            .startAt([q])
+            .endAt(['$q\uf8ff'])
+            .limit(50);
+      }
+      final snap = await base.get();
+      _all = snap.docs
+          .map(
+            (d) => TaskMember(
+              id: d.id,
+              name: d.data()['name'] as String? ?? '',
+              email: d.data()['email'] as String? ?? '',
+              userId: d.id,
+            ),
+          )
+          .where((u) => u.name.isNotEmpty || u.email.isNotEmpty)
+          .toList();
+    } catch (_) {
+      _all = [];
+      _error = true;
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  List<TaskMember> get _filtered {
+    return _all;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Select user'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 360,
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search email',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () => _loadUsers(_searchController.text),
+                ),
+              ),
+              onSubmitted: (v) => _loadUsers(v),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error
+                      ? const Center(
+                          child: Text(
+                            'Could not load users. Check network or rules, or invite manually.',
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : _filtered.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No users found. You can still invite by name or email.',
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: _filtered.length,
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (_, index) {
+                                final u = _filtered[index];
+                                return ListTile(
+                                  title: Text(u.name.isEmpty ? u.email : u.name),
+                                  subtitle:
+                                      u.email.isEmpty ? null : Text(u.email),
+                                  onTap: () => Navigator.of(context).pop(u),
+                                );
+                              },
+                            ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
       ],
     );
   }

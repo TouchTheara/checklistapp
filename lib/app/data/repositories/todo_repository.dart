@@ -249,6 +249,47 @@ class TodoRepository extends GetxService {
     _saveTodos();
   }
 
+  void assignSubtask(String todoId, String subtaskId, String? memberId) {
+    final index = _todos.indexWhere((todo) => todo.id == todoId);
+    if (index == -1) return;
+    final current = _todos[index];
+    final updatedSubtasks = current.subtasks
+        .map(
+          (s) => s.id == subtaskId
+              ? s.copyWith(assignedMemberId: memberId)
+              : s,
+        )
+        .toList();
+    _todos[index] = current.copyWith(
+      subtasks: updatedSubtasks,
+      updatedAt: DateTime.now(),
+    );
+    _todos.refresh();
+    _saveTodos();
+  }
+
+  void removeMember(String todoId, String memberId) {
+    final index = _todos.indexWhere((todo) => todo.id == todoId);
+    if (index == -1) return;
+    final current = _todos[index];
+    final filteredMembers =
+        current.members.where((m) => m.id != memberId).toList();
+    final updatedSubtasks = current.subtasks
+        .map(
+          (s) => s.assignedMemberId == memberId
+              ? s.copyWith(assignedMemberId: null)
+              : s,
+        )
+        .toList();
+    _todos[index] = current.copyWith(
+      members: filteredMembers,
+      subtasks: updatedSubtasks,
+      updatedAt: DateTime.now(),
+    );
+    _todos.refresh();
+    _saveTodos();
+  }
+
   void changeSort(SortOption option) {
     if (_sortOption.value == option) return;
     _sortOption.value = option;

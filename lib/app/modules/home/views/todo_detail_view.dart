@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 
 import '../../../data/models/todo.dart';
@@ -92,6 +93,72 @@ class TodoDetailView extends GetView<HomeController> {
                             style: theme.textTheme.bodyMedium,
                           ),
                         ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Members',
+                            style: theme.textTheme.titleMedium,
+                          ),
+                          TextButton.icon(
+                            onPressed: () async {
+                              final member = await _promptAddMember(context);
+                              if (member != null) {
+                                final updated = todo.copyWith(
+                                  members: [...todo.members, member],
+                                );
+                                controller.updateTodo(updated);
+                              }
+                            },
+                            icon: const Icon(Icons.person_add_alt),
+                            label: const Text('Invite'),
+                          ),
+                        ],
+                      ),
+                      if (todo.members.isEmpty)
+                        Text(
+                          'No members yet',
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: theme.colorScheme.outline),
+                        )
+                      else
+                        Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: todo.members
+                            .map(
+                              (m) => Chip(
+                                label: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      m.name,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(fontWeight: FontWeight.w600),
+                                    ),
+                                    Text(
+                                      m.email,
+                                      style: theme.textTheme.bodySmall,
+                                    ),
+                                    if (m.status != InviteStatus.accepted)
+                                      Text(
+                                        m.status.label,
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: m.status == InviteStatus.cancelled
+                                              ? theme.colorScheme.error
+                                              : theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                deleteIcon: const Icon(Icons.person_remove_alt_1),
+                                onDeleted: () => controller.removeMember(todo.id, m.id),
+                              ),
+                            )
+                            .toList(),
+                      ),
                       const SizedBox(height: 12),
                       LinearProgressIndicator(
                         value: todo.progress,
@@ -118,22 +185,82 @@ class TodoDetailView extends GetView<HomeController> {
                           style: theme.textTheme.bodyMedium,
                         )
                       else
-                        ...todo.subtasks.map(
-                          (sub) => Card(
-                            child: ListTile(
-                              title: Text(
-                                  sub.title.isEmpty ? 'Untitled' : sub.title),
-                              trailing: Checkbox(
-                                value: sub.isDone,
-                                shape: const CircleBorder(),
-                                onChanged: (_) =>
-                                    controller.toggleSubtask(todo.id, sub.id),
+                        ...todo.subtasks.map((sub) {
+                          final assignedMember = sub.assignedMemberId == null
+                              ? null
+                              : (() {
+                                  final found = todo.members
+                                      .where((m) => m.id == sub.assignedMemberId)
+                                      .toList();
+                                  return found.isNotEmpty ? found.first : null;
+                                })();
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Checkbox(
+                                    value: sub.isDone,
+                                    shape: const CircleBorder(),
+                                    onChanged: (_) =>
+                                        controller.toggleSubtask(todo.id, sub.id),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          sub.title.isEmpty ? 'Untitled' : sub.title,
+                                          style: theme.textTheme.bodyLarge,
+                                        ),
+                                        Text(
+                                          assignedMember == null
+                                              ? 'Unassigned'
+                                              : 'Assigned to ${assignedMember.name}',
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (todo.members.isNotEmpty)
+                                    DropdownButtonHideUnderline(
+                                      child: SizedBox(
+                                        width: 150,
+                                        child: DropdownButton<String?>(
+                                          isExpanded: true,
+                                          value: sub.assignedMemberId != null &&
+                                                  todo.members.any(
+                                                      (m) => m.id == sub.assignedMemberId)
+                                              ? sub.assignedMemberId
+                                              : null,
+                                          hint: const Text('Assign'),
+                                          items: [
+                                            const DropdownMenuItem(
+                                              value: null,
+                                              child: Text('Unassigned'),
+                                            ),
+                                            ...todo.members.map(
+                                              (m) => DropdownMenuItem(
+                                                value: m.id,
+                                                child: Text(m.name),
+                                              ),
+                                            ),
+                                          ],
+                                          onChanged: (val) => controller.assignSubtask(
+                                            todo.id,
+                                            sub.id,
+                                            val,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
-                              onTap: () =>
-                                  controller.toggleSubtask(todo.id, sub.id),
                             ),
-                          ),
-                        ),
+                          );
+                        }),
                     ],
                   ),
                 ),
@@ -251,8 +378,145 @@ class TodoDetailView extends GetView<HomeController> {
     }
   }
 
+  Future<TaskMember?> _promptAddMember(BuildContext context) async {
+    return showDialog<TaskMember>(
+      context: context,
+      builder: (_) => const _UserPickerDialog(),
+    );
+  }
+
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+}
+
+class _UserPickerDialog extends StatefulWidget {
+  const _UserPickerDialog();
+
+  @override
+  State<_UserPickerDialog> createState() => _UserPickerDialogState();
+}
+
+class _UserPickerDialogState extends State<_UserPickerDialog> {
+  final TextEditingController _searchController = TextEditingController();
+  List<TaskMember> _all = [];
+  bool _loading = true;
+  bool _error = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsers();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUsers([String query = '']) async {
+    try {
+      setState(() {
+        _loading = true;
+        _error = false;
+      });
+      Query<Map<String, dynamic>> base =
+          FirebaseFirestore.instance.collection('users').limit(50);
+      final q = query.trim();
+      if (q.isNotEmpty) {
+        base = FirebaseFirestore.instance
+            .collection('users')
+            .orderBy('email')
+            .startAt([q])
+            .endAt(['$q\uf8ff'])
+            .limit(50);
+      }
+      final snap = await base.get();
+      _all = snap.docs
+          .map(
+            (d) => TaskMember(
+              id: d.id,
+              name: d.data()['name'] as String? ?? '',
+              email: d.data()['email'] as String? ?? '',
+              userId: d.id,
+              status: InviteStatus.pending,
+            ),
+          )
+          .where((u) => u.name.isNotEmpty || u.email.isNotEmpty)
+          .toList();
+    } catch (_) {
+      _all = [];
+      _error = true;
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final users = _all;
+    return AlertDialog(
+      title: const Text('Select user'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 360,
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search email',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () => _loadUsers(_searchController.text),
+                ),
+              ),
+              onSubmitted: (v) => _loadUsers(v),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error
+                      ? const Center(
+                          child: Text(
+                            'Could not load users. You can still invite manually.',
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : users.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No users found. Invite by name or email below.',
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: users.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              itemBuilder: (_, index) {
+                                final u = users[index];
+                                return ListTile(
+                                  title: Text(u.name.isEmpty ? u.email : u.name),
+                                  subtitle:
+                                      u.email.isEmpty ? null : Text(u.email),
+                                  onTap: () => Navigator.of(context).pop(u),
+                                );
+                              },
+                            ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
   }
 }
 

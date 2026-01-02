@@ -57,4 +57,8 @@ class HomeController extends GetxController {
       _repository.addSubtask(todoId, subtask);
   void toggleSubtask(String todoId, String subtaskId) =>
       _repository.toggleSubtask(todoId, subtaskId);
+  void assignSubtask(String todoId, String subtaskId, String? memberId) =>
+      _repository.assignSubtask(todoId, subtaskId, memberId);
+  void removeMember(String todoId, String memberId) =>
+      _repository.removeMember(todoId, memberId);
 }

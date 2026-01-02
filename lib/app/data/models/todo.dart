@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 const _uuid = Uuid();
 
@@ -73,11 +74,13 @@ class Todo {
     this.deletedAt,
     this.updatedAt,
     List<SubTask>? subtasks,
+    List<TaskMember>? members,
   })  : id = id ?? _uuid.v4(),
         createdAt = createdAt ?? DateTime.now(),
         order = order ?? DateTime.now().microsecondsSinceEpoch,
         attachments = List.unmodifiable(attachments ?? const []),
-        subtasks = List.unmodifiable(subtasks ?? const []);
+        subtasks = List.unmodifiable(subtasks ?? const []),
+        members = List.unmodifiable(members ?? const []);
 
   factory Todo.create({
     required String title,
@@ -88,6 +91,7 @@ class Todo {
     String? category,
     List<String>? attachments,
     List<SubTask>? subtasks,
+    List<TaskMember>? members,
   }) {
     return Todo(
       title: title.trim(),
@@ -97,6 +101,7 @@ class Todo {
       category: category?.trim().isEmpty == true ? null : category?.trim(),
       attachments: attachments,
       subtasks: subtasks,
+      members: members,
     );
   }
 
@@ -115,6 +120,7 @@ class Todo {
   final DateTime? deletedAt;
   final DateTime? updatedAt;
   final List<SubTask> subtasks;
+  final List<TaskMember> members;
 
   int get totalSubtasks => subtasks.length;
   int get completedSubtasks => subtasks.where((sub) => sub.isDone).length;
@@ -138,6 +144,7 @@ class Todo {
     DateTime? deletedAt,
     DateTime? updatedAt,
     List<SubTask>? subtasks,
+    List<TaskMember>? members,
   }) {
     return Todo(
       id: id ?? this.id,
@@ -155,6 +162,7 @@ class Todo {
       deletedAt: deletedAt ?? this.deletedAt,
       updatedAt: updatedAt ?? this.updatedAt,
       subtasks: subtasks ?? this.subtasks,
+      members: members ?? this.members,
     );
   }
 
@@ -176,12 +184,17 @@ class Todo {
       'isDeleted': isDeleted,
       'deletedAt': deletedAt?.toIso8601String(),
       'subtasks': subtasks.map((sub) => sub.toJson()).toList(),
+      'members': members.map((m) => m.toJson()).toList(),
     };
   }
 
   factory Todo.fromJson(Map<String, dynamic> json) {
     final subtasks = (json['subtasks'] as List?)
             ?.map((e) => SubTask.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const [];
+    final members = (json['members'] as List?)
+            ?.map((e) => TaskMember.fromJson(e as Map<String, dynamic>))
             .toList() ??
         const [];
     final isCompleted = (json['isCompleted'] as bool? ?? false) ||
@@ -212,6 +225,7 @@ class Todo {
           ? DateTime.tryParse(json['deletedAt'] as String)
           : null,
       subtasks: subtasks,
+      members: members,
     );
   }
 }
@@ -221,21 +235,25 @@ class SubTask {
     String? id,
     required this.title,
     this.isDone = false,
+    this.assignedMemberId,
   }) : id = id ?? _uuid.v4();
 
   final String id;
   final String title;
   final bool isDone;
+  final String? assignedMemberId;
 
   SubTask copyWith({
     String? id,
     String? title,
     bool? isDone,
+    String? assignedMemberId,
   }) {
     return SubTask(
       id: id ?? this.id,
       title: title ?? this.title,
       isDone: isDone ?? this.isDone,
+      assignedMemberId: assignedMemberId ?? this.assignedMemberId,
     );
   }
 
@@ -244,6 +262,7 @@ class SubTask {
       'id': id,
       'title': title,
       'isDone': isDone,
+      'assignedMemberId': assignedMemberId,
     };
   }
 
@@ -252,6 +271,84 @@ class SubTask {
       id: json['id'] as String?,
       title: json['title'] as String? ?? '',
       isDone: json['isDone'] as bool? ?? false,
+      assignedMemberId: json['assignedMemberId'] as String?,
     );
+  }
+}
+
+class TaskMember {
+  TaskMember({
+    String? id,
+    required this.name,
+    required this.email,
+    this.userId,
+    DateTime? invitedAt,
+    this.status = InviteStatus.pending,
+  })  : id = id ?? _uuid.v4(),
+        invitedAt = invitedAt ?? DateTime.now();
+
+  final String id;
+  final String name;
+  final String email;
+  final String? userId; // null if not registered yet
+  final DateTime invitedAt;
+  final InviteStatus status;
+
+  TaskMember copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? userId,
+    DateTime? invitedAt,
+    InviteStatus? status,
+  }) {
+    return TaskMember(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      userId: userId ?? this.userId,
+      invitedAt: invitedAt ?? this.invitedAt,
+      status: status ?? this.status,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'email': email,
+        'userId': userId,
+        'invitedAt': invitedAt.toIso8601String(),
+        'status': status.name,
+      };
+
+  factory TaskMember.fromJson(Map<String, dynamic> json) {
+    return TaskMember(
+      id: json['id'] as String?,
+      name: json['name'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      userId: json['userId'] as String?,
+      invitedAt: json['invitedAt'] != null
+          ? DateTime.tryParse(json['invitedAt'] as String)
+          : DateTime.now(),
+      status: InviteStatus.values.firstWhere(
+        (s) => s.name == json['status'],
+        orElse: () => InviteStatus.pending,
+      ),
+    );
+  }
+}
+
+enum InviteStatus { pending, accepted, cancelled }
+
+extension InviteStatusX on InviteStatus {
+  String get label {
+    switch (this) {
+      case InviteStatus.pending:
+        return 'Pending';
+      case InviteStatus.accepted:
+        return 'Accepted';
+      case InviteStatus.cancelled:
+        return 'Cancelled';
+    }
   }
 }
