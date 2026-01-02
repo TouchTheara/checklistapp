@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 
 import '../models/todo.dart';
 import '../services/storage_service.dart';
+import '../services/notification_service.dart';
 
 class TodoRepository extends GetxService {
   TodoRepository({StorageService? storageService, List<Todo>? seed})
@@ -20,6 +21,10 @@ class TodoRepository extends GetxService {
   static const _bucket = 'safelist-5b99d.firebasestorage.app';
   final FirebaseStorage _storage =
       FirebaseStorage.instanceFor(app: Firebase.app(), bucket: _bucket);
+  final NotificationService? _notificationService =
+      Get.isRegistered<NotificationService>()
+          ? Get.find<NotificationService>()
+          : null;
   String? _userId;
 
   RxList<Todo> get rawTodos => _todos;
@@ -148,12 +153,19 @@ class TodoRepository extends GetxService {
       order: todo.order == 0 ? nextOrder : todo.order,
     ));
     _saveTodos();
+    _notificationService?.scheduleReminder(todo);
   }
 
   void updateTodo(Todo todo) {
     final index = _todos.indexWhere((item) => item.id == todo.id);
     if (index == -1) return;
     final current = _todos[index];
+    final previousMembers = current.members;
+    final newMembers = todo.members
+        .where(
+          (m) => previousMembers.every((prev) => prev.id != m.id),
+        )
+        .toList();
     _todos[index] = todo.copyWith(
       createdAt: current.createdAt,
       updatedAt: DateTime.now(),
@@ -163,6 +175,16 @@ class TodoRepository extends GetxService {
     );
     _todos.refresh();
     _saveTodos();
+    _notificationService?.scheduleReminder(todo);
+    for (final member in newMembers) {
+      if (member.userId != null) {
+        _notificationService?.notifyInvite(
+          inviterName: 'A teammate',
+          member: member,
+          todo: todo,
+        );
+      }
+    }
   }
 
   void deleteTodo(String id) {
@@ -234,19 +256,34 @@ class TodoRepository extends GetxService {
     final index = _todos.indexWhere((todo) => todo.id == todoId);
     if (index == -1) return;
     final current = _todos[index];
+    final before = current.subtasks
+        .firstWhere((s) => s.id == subtaskId, orElse: () => SubTask(title: ''));
+    final wasDone = before.isDone;
     final updatedSubtasks = current.subtasks
         .map(
           (s) => s.id == subtaskId ? s.copyWith(isDone: !s.isDone) : s,
         )
         .toList();
+    final nowDone = updatedSubtasks
+            .firstWhere((s) => s.id == subtaskId, orElse: () => before)
+            .isDone ==
+        true;
+    final allDone =
+        updatedSubtasks.isNotEmpty && updatedSubtasks.every((s) => s.isDone);
     _todos[index] = current.copyWith(
       subtasks: updatedSubtasks,
-      isCompleted:
-          updatedSubtasks.isNotEmpty && updatedSubtasks.every((s) => s.isDone),
+      isCompleted: allDone,
       updatedAt: DateTime.now(),
     );
     _todos.refresh();
     _saveTodos();
+    if (!wasDone && nowDone) {
+      _notificationService
+          ?.notifySubtaskCompleted(todo: _todos[index], subtask: before);
+      if (allDone) {
+        _notificationService?.notifyTaskCompleted(_todos[index]);
+      }
+    }
   }
 
   void assignSubtask(String todoId, String subtaskId, String? memberId) {
@@ -266,6 +303,15 @@ class TodoRepository extends GetxService {
     );
     _todos.refresh();
     _saveTodos();
+    if (memberId != null) {
+      final member = _findMember(current.members, memberId);
+      if (member?.userId != null) {
+        _notificationService?.notifyAssignment(
+          member: member!,
+          todo: _todos[index],
+        );
+      }
+    }
   }
 
   void removeMember(String todoId, String memberId) {
@@ -288,6 +334,28 @@ class TodoRepository extends GetxService {
     );
     _todos.refresh();
     _saveTodos();
+  }
+
+  void updateMemberStatus(
+      String todoId, String userId, InviteStatus status) {
+    final index = _todos.indexWhere((todo) => todo.id == todoId);
+    if (index == -1) return;
+    final current = _todos[index];
+    final updatedMembers = current.members
+        .map((m) =>
+            m.userId == userId ? m.copyWith(status: status) : m)
+        .toList();
+    _todos[index] =
+        current.copyWith(members: updatedMembers, updatedAt: DateTime.now());
+    _todos.refresh();
+    _saveTodos();
+  }
+
+  TaskMember? _findMember(List<TaskMember> members, String memberId) {
+    for (final m in members) {
+      if (m.id == memberId) return m;
+    }
+    return null;
   }
 
   void changeSort(SortOption option) {

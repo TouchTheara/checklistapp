@@ -10,6 +10,7 @@ import '../data/repositories/todo_repository.dart';
 import '../data/repositories/profile_repository.dart';
 import '../modules/home/controllers/home_controller.dart';
 import '../modules/home/bindings/home_binding.dart';
+import '../data/services/notification_service.dart';
 
 class AppController extends GetxController {
   AppController(
@@ -25,6 +26,8 @@ class AppController extends GetxController {
   final AuthService _authService;
   final TodoRepository _todoRepository = Get.find<TodoRepository>();
   final ProfileRepository _profileRepository = Get.find<ProfileRepository>();
+  final NotificationService _notificationService =
+      Get.find<NotificationService>();
 
   final Rx<ThemeMode> _themeMode = ThemeMode.light.obs;
   final RxBool _onboardingComplete = false.obs;
@@ -54,6 +57,7 @@ class AppController extends GetxController {
     _loggedIn.value = _authService.isLoggedIn;
     _userName.value = _authService.name ?? '';
     _userEmail.value = _authService.email ?? '';
+    _notificationService.onLogin(_authService.userId);
     _syncUserData();
   }
 
@@ -82,6 +86,7 @@ class AppController extends GetxController {
       await _syncUserData();
       await _seedDemoIfEmpty();
       _resetHomeTab();
+      _notificationService.onLogin(_authService.userId);
     }
     return ok;
   }
@@ -103,11 +108,14 @@ class AppController extends GetxController {
       await _syncUserData();
       await _seedDemoIfEmpty();
       _resetHomeTab();
+      _notificationService.onLogin(_authService.userId);
     }
     return ok;
   }
 
   Future<void> logout() async {
+    // Handle notification cleanup before signing out (requires auth).
+    await _notificationService.onLogout();
     await _authService.logout();
     _loggedIn.value = false;
     await _todoRepository.clearForLogout();
@@ -133,6 +141,7 @@ class AppController extends GetxController {
       await _syncUserData();
       await _seedDemoIfEmpty();
       _resetHomeTab();
+      _notificationService.onLogin(_authService.userId);
     } else if (error != null && error.isNotEmpty) {
       Get.snackbar('auth.failed'.tr, error,
           snackPosition: SnackPosition.BOTTOM);

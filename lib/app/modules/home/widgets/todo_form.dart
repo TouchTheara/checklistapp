@@ -241,16 +241,22 @@ class _TodoFormState extends State<TodoForm> {
 
   Future<void> _pickReminder() async {
     final now = DateTime.now();
+    final firstDate = now;
+    final lastDate = now.add(const Duration(days: 365 * 2));
+    final baseInitial = _reminderAt ?? _dueDate ?? now;
+    final initialDate = baseInitial.isBefore(firstDate)
+        ? firstDate
+        : (baseInitial.isAfter(lastDate) ? lastDate : baseInitial);
     final date = await showDatePicker(
       context: context,
-      initialDate: _reminderAt ?? _dueDate ?? now,
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365 * 2)),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
     if (date == null) return;
     final time = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(_reminderAt ?? now),
+      initialTime: TimeOfDay.fromDateTime(_reminderAt ?? initialDate),
     );
     if (time == null) return;
     final combined = DateTime(

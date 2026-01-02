@@ -10,6 +10,7 @@ import 'app/data/services/locale_service.dart';
 import 'app/data/services/onboarding_service.dart';
 import 'app/data/services/theme_service.dart';
 import 'app/data/services/sample_data_service.dart';
+import 'app/data/services/notification_service.dart';
 import 'app/i18n/app_translations.dart';
 import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
@@ -22,6 +23,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await Get.putAsync<NotificationService>(() => NotificationService().init());
   await Get.putAsync<TodoRepository>(() => TodoRepository().init());
   await Get.putAsync<ProfileRepository>(() => ProfileRepository().init());
   await Get.putAsync<ThemeService>(() => ThemeService().init());

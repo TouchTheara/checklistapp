@@ -7,4 +7,5 @@ abstract class Routes {
   static const support = '/support';
   static const terms = '/terms';
   static const search = '/search';
+  static const notifications = '/notifications';
 }

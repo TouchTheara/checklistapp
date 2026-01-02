@@ -80,9 +80,12 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     _loggedIn = false;
     _userId = null;
+    _email = null;
+    _name = null;
     await prefs.setBool(_loggedInKey, false);
     await prefs.remove(_userKey);
     await _auth.signOut();
+    await _googleSignIn.signOut();
   }
 
   Future<void> updateProfile({
@@ -93,6 +96,9 @@ class AuthService {
     if (user != null) {
       try {
         await user.updateDisplayName(name);
+        if (email.isNotEmpty && email != user.email) {
+          await user.verifyBeforeUpdateEmail(email);
+        }
       } on FirebaseAuthException {
         // If requires recent login or fails, keep existing values to avoid crash.
       }
@@ -105,6 +111,8 @@ class AuthService {
 
   Future<(bool ok, String? error)> signInWithGoogle() async {
     try {
+      // Clear any stale sessions to avoid stuck silent sign-ins.
+      await _googleSignIn.signOut();
       GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
       googleUser ??= await _googleSignIn.signIn();
       if (googleUser == null) return (false, 'auth.google.cancelled');
@@ -121,6 +129,7 @@ class AuthService {
       await _persistSession();
       return (true, null);
     } on FirebaseAuthException catch (e) {
+      // Common: "account-exists-with-different-credential" or "user-disabled"
       return (false, e.code);
     } catch (e) {
       return (false, e.toString());

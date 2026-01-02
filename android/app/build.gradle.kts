@@ -11,11 +11,12 @@ plugins {
 android {
     namespace = "com.example.safelist"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "25.2.9519653" 
+    // Align with highest required NDK from dependencies
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -44,4 +45,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Enable desugaring for Java 8+ APIs used by some libs
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
 }

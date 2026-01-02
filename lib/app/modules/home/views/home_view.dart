@@ -11,6 +11,9 @@ import '../../profile/views/profile_view.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/todo_form.dart';
 import 'todo_detail_view.dart';
+import '../../../routes/app_routes.dart';
+import '../../notifications/controllers/notifications_controller.dart';
+import '../../notifications/views/notifications_view.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -73,6 +76,7 @@ class HomeView extends GetView<HomeController> {
         'tab.dashboard'.tr,
         'tab.completed'.tr,
         'tab.archive'.tr,
+        'nav.notifications'.tr,
         'tab.profile'.tr,
       ];
       return _buildScaffold(context, tabIndex, titles, binController);
@@ -85,13 +89,47 @@ class HomeView extends GetView<HomeController> {
     List<String> titles,
     BinController binController,
   ) {
-    final hideAppBar = tabIndex == 0 || tabIndex == 3;
+    // Hide app bar on dashboard (0), notifications (3), and profile (4)
+    final hideAppBar = tabIndex == 0 || tabIndex == 3 || tabIndex == 4;
+    final notifCtrl = Get.find<NotificationsController>();
     return Scaffold(
       appBar: hideAppBar
           ? null
           : AppBar(
               title: Text(titles[tabIndex]),
               actions: [
+                if (tabIndex != 2) // skip showing on archive tab
+                  Obx(() {
+                    final unread = notifCtrl.unreadCount;
+                    return IconButton(
+                      tooltip: 'Notifications',
+                      onPressed: () => Get.toNamed(Routes.notifications),
+                      icon: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          const Icon(Icons.notifications_none),
+                          if (unread > 0)
+                            Positioned(
+                              right: -6,
+                              top: -6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  unread > 9 ? '9+' : unread.toString(),
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 11),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }),
                 if (tabIndex == 2)
                   Obx(
                     () {
@@ -122,36 +160,74 @@ class HomeView extends GetView<HomeController> {
             DashboardView(onOpenForm: _openTodoForm),
             DoneView(onOpenForm: _openTodoForm),
             const BinBody(),
+            const NotificationsView(),
             const ProfileView(),
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: tabIndex,
-        onDestinationSelected: controller.changeTab,
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.fact_check_outlined),
-            selectedIcon: const Icon(Icons.fact_check),
-            label: 'nav.checks'.tr,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.done_all_outlined),
-            selectedIcon: const Icon(Icons.done_all),
-            label: 'nav.completed'.tr,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.delete_outline),
-            selectedIcon: const Icon(Icons.delete),
-            label: 'nav.archive'.tr,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: 'nav.profile'.tr,
-          ),
-        ],
-      ),
+      bottomNavigationBar: Obx(() {
+        final unread = notifCtrl.unreadCount;
+        Widget notifIcon(bool selected) => Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  selected ? Icons.notifications : Icons.notifications_none,
+                ),
+                if (unread > 0)
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        unread > 9 ? '9+' : unread.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+        return NavigationBar(
+          selectedIndex: tabIndex,
+          onDestinationSelected: controller.changeTab,
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.fact_check_outlined),
+              selectedIcon: const Icon(Icons.fact_check),
+              label: 'nav.checks'.tr,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.done_all_outlined),
+              selectedIcon: const Icon(Icons.done_all),
+              label: 'nav.completed'.tr,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.delete_outline),
+              selectedIcon: const Icon(Icons.delete),
+              label: 'nav.archive'.tr,
+            ),
+            NavigationDestination(
+              icon: notifIcon(false),
+              selectedIcon: notifIcon(true),
+              label: 'nav.notifications'.tr,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: 'nav.profile'.tr,
+            ),
+          ],
+        );
+      }),
     );
   }
 }

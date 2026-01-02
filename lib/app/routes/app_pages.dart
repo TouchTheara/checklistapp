@@ -11,6 +11,8 @@ import '../modules/onboarding/views/language_select_view.dart';
 import '../modules/support/views/support_view.dart';
 import '../modules/search/bindings/search_binding.dart';
 import '../modules/search/views/search_view.dart';
+import '../modules/notifications/bindings/notifications_binding.dart';
+import '../modules/notifications/views/notifications_view.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -57,6 +59,11 @@ class AppPages {
     GetPage(
       name: Routes.support,
       page: () => const SupportView(),
+    ),
+    GetPage(
+      name: Routes.notifications,
+      page: () => const NotificationsView(),
+      binding: NotificationsBinding(),
     ),
     GetPage(
       name: Routes.terms,
