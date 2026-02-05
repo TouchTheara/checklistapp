@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 class CustomRefreshHeaderWidget extends StatelessWidget {
@@ -23,7 +24,7 @@ class CustomRefreshHeaderWidget extends StatelessWidget {
               ),
               SizedBox(width: 6.0),
               Text(
-                '刷新数据',
+                'refresh.refreshing'.tr,
               ),
             ],
           ),

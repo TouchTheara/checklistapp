@@ -43,40 +43,30 @@ class NotificationsView extends GetView<NotificationsController> {
           ],
         ),
         body: controller.notifications.isEmpty
-            ? GetBuilder(
-                init: controller,
-                builder: (_) {
-                  return ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      const SizedBox(height: 48),
-                      Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.notifications_off_outlined,
-                                size: 64, color: theme.colorScheme.outline),
-                            const SizedBox(height: 8),
-                            Text(
-                              'notifications.empty.title'.tr,
-                              style: theme.textTheme.titleMedium
-                                  ?.copyWith(color: theme.colorScheme.outline),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'notifications.empty.desc'.tr,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(color: theme.colorScheme.outline),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                })
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.notifications_off_outlined,
+                        size: 64, color: theme.colorScheme.outline),
+                    const SizedBox(height: 8),
+                    Text(
+                      'notifications.empty.title'.tr,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(color: theme.colorScheme.outline),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'notifications.empty.desc'.tr,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: theme.colorScheme.outline),
+                    ),
+                  ],
+                ),
+              )
             : SmartRefresher(
                 controller: controller.refreshController,
                 enablePullDown: true,

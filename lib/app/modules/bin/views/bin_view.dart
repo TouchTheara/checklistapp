@@ -66,14 +66,7 @@ class BinBody extends GetView<BinController> {
     return Obx(() {
       final deleted = controller.binTodos;
       return deleted.isEmpty
-          ? ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: const [
-                SizedBox(height: 24),
-                _BinEmptyState(),
-                SizedBox(height: 24),
-              ],
-            )
+          ? const _BinEmptyState()
           : SmartRefresher(
               controller: controller.refreshController,
               enablePullDown: true,
@@ -201,6 +194,8 @@ class _BinEmptyState extends StatelessWidget {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
             Icons.delete_outline,

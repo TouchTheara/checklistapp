@@ -21,7 +21,11 @@ class SearchView extends GetView<AppSearchController> {
 
   @override
   Widget build(BuildContext context) {
-    final tabs = ['Active', 'Completed', 'Archive'];
+    final tabs = [
+      'search.tab.active'.tr,
+      'search.tab.completed'.tr,
+      'search.tab.archive'.tr
+    ];
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -123,12 +127,12 @@ class SearchView extends GetView<AppSearchController> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Restore',
+                      tooltip: 'search.restore'.tr,
                       icon: const Icon(Icons.restore),
                       onPressed: () => controller.restoreTodo(todo.id),
                     ),
                     IconButton(
-                      tooltip: 'Delete forever',
+                      tooltip: 'search.deleteForever'.tr,
                       icon: const Icon(Icons.delete_forever),
                       onPressed: () => controller.deleteForever(todo.id),
                     ),
@@ -166,12 +170,12 @@ class _SearchEmptyState extends StatelessWidget {
           Icon(Icons.search_off, size: 64, color: theme.colorScheme.outline),
           const SizedBox(height: 12),
           Text(
-            'No results',
+            'search.empty.title'.tr,
             style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 4),
           Text(
-            'Try a different keyword',
+            'search.empty.desc'.tr,
             style: theme.textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 class CustomLoadingFooterWidget extends StatelessWidget {
@@ -23,7 +24,7 @@ class CustomLoadingFooterWidget extends StatelessWidget {
               ),
               SizedBox(width: 6.0),
               Text(
-                '加载中',
+                'refresh.loading'.tr,
               )
             ],
           );

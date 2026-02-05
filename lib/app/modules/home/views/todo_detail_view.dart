@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
@@ -234,7 +235,7 @@ class TodoDetailView extends GetView<HomeController> {
                                               .copyWith(
                                                   color:
                                                       theme.colorScheme.outline,
-                                                  fontSize: 11),
+                                                  fontSize: 11.sp),
                                         ),
                                       ],
                                     ),
@@ -261,7 +262,7 @@ class TodoDetailView extends GetView<HomeController> {
                                                     m.name,
                                                     style: theme
                                                         .textTheme.bodyMedium!
-                                                        .copyWith(fontSize: 13),
+                                                        .copyWith(fontSize: 13.sp),
                                                   ),
                                                 ),
                                               )

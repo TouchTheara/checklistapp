@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 import 'app/controllers/app_controller.dart';
+import 'app/core/theme/screenutil_text_theme.dart';
 import 'app/data/repositories/profile_repository.dart';
 import 'app/data/repositories/todo_repository.dart';
 import 'app/data/services/auth_service.dart';
@@ -50,42 +52,54 @@ class ChecklistApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appController = Get.find<AppController>();
-    return Obx(
-      () => RefreshConfiguration(
-        headerBuilder: () => const CustomRefreshHeaderWidget(),
-        footerBuilder: () => const CustomLoadingFooterWidget(),
-        hideFooterWhenNotFull: true,
-        child: GetMaterialApp(
-          title: 'SafeList',
-          debugShowCheckedModeBanner: false,
-          translations: AppTranslations(),
-          locale: appController.locale,
-          fallbackLocale: AppTranslations.en,
-          theme: ThemeData(
-            colorScheme:
-                ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4)),
-            useMaterial3: true,
-            visualDensity: VisualDensity.adaptivePlatformDensity,
+    return ScreenUtilInit(
+      designSize: const Size(390, 844),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        final appController = Get.find<AppController>();
+        final baseLight = ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4)),
+          useMaterial3: true,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        );
+        final baseDark = ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF6750A4),
+            brightness: Brightness.dark,
           ),
-          darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF6750A4),
-              brightness: Brightness.dark,
+          useMaterial3: true,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        );
+        return Obx(
+          () => RefreshConfiguration(
+            headerBuilder: () => const CustomRefreshHeaderWidget(),
+            footerBuilder: () => const CustomLoadingFooterWidget(),
+            hideFooterWhenNotFull: true,
+            child: GetMaterialApp(
+              title: 'SafeList',
+              debugShowCheckedModeBanner: false,
+              translations: AppTranslations(),
+              locale: appController.locale,
+              fallbackLocale: AppTranslations.en,
+              theme: baseLight.copyWith(
+                textTheme: scaledTextTheme(baseLight.textTheme),
+              ),
+              darkTheme: baseDark.copyWith(
+                textTheme: scaledTextTheme(baseDark.textTheme),
+              ),
+              themeMode: appController.themeMode,
+              initialRoute: AppPages.initialRoute(appController),
+              getPages: AppPages.pages,
+              unknownRoute: GetPage(
+                name: Routes.home,
+                page: () => const HomeView(),
+                binding: HomeBinding(),
+              ),
             ),
-            useMaterial3: true,
-            visualDensity: VisualDensity.adaptivePlatformDensity,
           ),
-          themeMode: appController.themeMode,
-          initialRoute: AppPages.initialRoute(appController),
-          getPages: AppPages.pages,
-          unknownRoute: GetPage(
-            name: Routes.home,
-            page: () => const HomeView(),
-            binding: HomeBinding(),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

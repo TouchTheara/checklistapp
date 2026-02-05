@@ -118,7 +118,7 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
       child: Column(
@@ -137,28 +137,28 @@ class _FilterBar extends StatelessWidget {
             onTap: () => Get.toNamed(Routes.search),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _openSmartAdd(context),
-                  icon: const Icon(Icons.auto_awesome),
-                  label: Text('smart.add'.tr),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    foregroundColor: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                tooltip: 'smart.voice.tooltip'.tr,
-                onPressed: () => _openSmartAdd(context, voiceMode: true),
-                icon: const Icon(Icons.mic_none),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
+          // Row(
+          //   children: [
+          //     Expanded(
+          //       child: ElevatedButton.icon(
+          //         onPressed: () => _openSmartAdd(context),
+          //         icon: const Icon(Icons.auto_awesome),
+          //         label: Text('smart.add'.tr),
+          //         style: ElevatedButton.styleFrom(
+          //           backgroundColor: theme.colorScheme.primaryContainer,
+          //           foregroundColor: theme.colorScheme.onPrimaryContainer,
+          //         ),
+          //       ),
+          //     ),
+          //     const SizedBox(width: 8),
+          //     IconButton(
+          //       tooltip: 'smart.voice.tooltip'.tr,
+          //       onPressed: () => _openSmartAdd(context, voiceMode: true),
+          //       icon: const Icon(Icons.mic_none),
+          //     ),
+          //   ],
+          // ),
+          // const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -237,6 +237,7 @@ class _FilterBar extends StatelessWidget {
     );
   }
 
+  // ignore: unused_element
   Future<void> _openSmartAdd(BuildContext context,
       {bool voiceMode = false}) async {
     final controller = Get.find<DashboardController>();
@@ -319,10 +320,10 @@ class _FilterHeader extends SliverPersistentHeaderDelegate {
   final Widget child;
 
   @override
-  double get minExtent => 170;
+  double get minExtent => 120;
 
   @override
-  double get maxExtent => 180;
+  double get maxExtent => 125;
 
   @override
   Widget build(

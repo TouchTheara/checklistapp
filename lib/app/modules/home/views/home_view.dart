@@ -1,4 +1,4 @@
-import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
+import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -10,7 +10,6 @@ import '../../done/views/done_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/todo_form.dart';
-import '../../../routes/app_routes.dart';
 import '../../notifications/controllers/notifications_controller.dart';
 import '../../notifications/views/notifications_view.dart';
 
@@ -97,38 +96,6 @@ class HomeView extends GetView<HomeController> {
           : AppBar(
               title: Text(titles[tabIndex]),
               actions: [
-                if (tabIndex != 2) // skip showing on archive tab
-                  Obx(() {
-                    final unread = notifCtrl.unreadCount;
-                    return IconButton(
-                      tooltip: 'Notifications',
-                      onPressed: () => Get.toNamed(Routes.notifications),
-                      icon: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          const Icon(Icons.notifications_none),
-                          if (unread > 0)
-                            Positioned(
-                              right: -6,
-                              top: -6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  unread > 9 ? '9+' : unread.toString(),
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 11),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    );
-                  }),
                 if (tabIndex == 2)
                   Obx(
                     () {
@@ -144,9 +111,7 @@ class HomeView extends GetView<HomeController> {
                   ),
               ],
             ),
-      floatingActionButtonLocation: tabIndex == 0
-          ? FloatingActionButtonLocation.endDocked
-          : FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: tabIndex == 0
           ? FloatingActionButton.extended(
               key: addTodoFabKey,
@@ -170,84 +135,30 @@ class HomeView extends GetView<HomeController> {
       bottomNavigationBar: Obx(() {
         final unread = notifCtrl.unreadCount;
         final theme = Theme.of(context);
-        final labels = [
-          'nav.checks'.tr,
-          'nav.completed'.tr,
-          'nav.archive'.tr,
-          'nav.notifications'.tr,
-          'nav.profile'.tr,
-        ];
-        final icons = [
-          Icons.fact_check_outlined,
-          Icons.done_all_outlined,
-          Icons.delete_outline,
-          Icons.notifications_none,
-          Icons.person_outline,
-        ];
-        Widget buildIcon(int index, bool isActive) {
-          final color = isActive
-              ? theme.colorScheme.primary
-              : theme.colorScheme.onSurfaceVariant;
-          if (index != 3) return Icon(icons[index], color: color);
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(
-                isActive ? Icons.notifications : Icons.notifications_none,
-                color: color,
-              ),
-              if (unread > 0)
-                Positioned(
-                  right: -8,
-                  top: -6,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      unread > 9 ? '9+' : unread.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        }
-
-        final showFab = tabIndex == 0;
-        return AnimatedBottomNavigationBar.builder(
-          itemCount: icons.length,
-          tabBuilder: (index, isActive) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              buildIcon(index, isActive),
-              const SizedBox(height: 4),
-              Text(
-                labels[index],
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: isActive
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          activeIndex: tabIndex,
-          gapLocation: showFab ? GapLocation.end : GapLocation.none,
-          notchSmoothness: NotchSmoothness.softEdge,
-          leftCornerRadius: 24,
-          rightCornerRadius: showFab ? 0 : 24,
-          height: 72,
-          backgroundColor: theme.colorScheme.surface,
+        final badge = unread > 0
+            ? {
+                3: unread > 9 ? '9+' : unread.toString(),
+              }
+            : <int, dynamic>{};
+        return ConvexAppBar.badge(
+          badge,
+          initialActiveIndex: tabIndex,
           onTap: controller.changeTab,
+          backgroundColor: theme.colorScheme.surface,
+          activeColor: theme.colorScheme.primary,
+          color: theme.colorScheme.onSurfaceVariant,
+          elevation: 8,
+          height: 64,
+          top: -12,
+          curveSize: 80,
+          items: [
+            TabItem(icon: Icons.fact_check_outlined, title: 'nav.checks'.tr),
+            TabItem(icon: Icons.done_all_outlined, title: 'nav.completed'.tr),
+            TabItem(icon: Icons.delete_outline, title: 'nav.archive'.tr),
+            TabItem(
+                icon: Icons.notifications_none, title: 'nav.notifications'.tr),
+            TabItem(icon: Icons.person_outline, title: 'nav.profile'.tr),
+          ],
         );
       }),
     );
