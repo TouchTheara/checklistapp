@@ -230,11 +230,12 @@ class _ProfileAvatar extends StatelessWidget {
     final avatarPath = controller.avatarPath;
     final hasImage = avatarPath != null && avatarPath.isNotEmpty;
     ImageProvider? provider;
-    if (hasImage) {
-      if (avatarPath!.startsWith('http')) {
-        provider = NetworkImage(avatarPath);
+    final path = avatarPath;
+    if (path != null && path.isNotEmpty) {
+      if (path.startsWith('http')) {
+        provider = NetworkImage(path);
       } else {
-        provider = FileImage(File(avatarPath)) as ImageProvider;
+        provider = FileImage(File(path)) as ImageProvider;
       }
     }
     return Stack(
@@ -370,6 +371,7 @@ Future<void> _showImageSourceSheet(BuildContext context) async {
   );
 
   if (source == null) return;
+  if (!context.mounted) return;
   await _pickProfileImage(context, source);
 }
 

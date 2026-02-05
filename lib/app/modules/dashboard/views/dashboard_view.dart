@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 import '../../../data/models/todo.dart';
 import '../../../routes/app_routes.dart';
@@ -18,66 +19,54 @@ class DashboardView extends GetView<DashboardController> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final todos = controller.todos;
+      final todos = controller.pagedTodos;
       final canReorder = controller.sortOption == SortOption.manual &&
           !controller.urgentOnly &&
           controller.categories.isNotEmpty;
-      return CustomScrollView(
-        slivers: [
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _FilterHeader(
-              child: _FilterBar(controller: controller),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding:
-                  const EdgeInsets.only(left: 12, right: 12, bottom: 4, top: 0),
-              child: DashboardCard(
-                total: controller.totalCount,
-                completed: controller.completedCount,
-                rate: controller.completionRate,
-                priorityBreakdown: controller.priorityBreakdown,
+      return SmartRefresher(
+        controller: controller.refreshController,
+        enablePullDown: true,
+        enablePullUp: controller.hasMore,
+        onRefresh: () async {
+          await controller.refresh();
+        },
+        onLoading: () async {
+          controller.loadMore();
+        },
+        child: CustomScrollView(
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _FilterHeader(
+                child: _FilterBar(controller: controller),
               ),
             ),
-          ),
-          if (todos.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: _HomeEmptyState(),
+                padding: const EdgeInsets.only(
+                    left: 12, right: 12, bottom: 4, top: 0),
+                child: DashboardCard(
+                  total: controller.totalCount,
+                  completed: controller.completedCount,
+                  rate: controller.completionRate,
+                  priorityBreakdown: controller.priorityBreakdown,
+                ),
               ),
-            )
-          else if (canReorder)
-            SliverReorderableList(
-              itemCount: todos.length,
-              onReorder: controller.reorder,
-              itemBuilder: (_, index) {
-                final todo = todos[index];
-                return TodoCard(
-                  key: ValueKey('todo_${todo.id}'),
-                  todo: todo,
-                  onToggle: () => controller.toggleCompleted(todo.id),
-                  onDelete: () => controller.deleteTodo(todo.id),
-                  onEdit: () => onOpenForm(context, existing: todo),
-                  onOpenDetail: () => Get.toNamed(
-                    Routes.todoDetail,
-                    arguments: todo.id,
-                  ),
-                  isDashboard: true,
-                );
-              },
-            )
-          else
-            SliverList.separated(
-              itemCount: todos.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (_, index) {
-                final todo = todos[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TodoCard(
+            ),
+            if (todos.isEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: _HomeEmptyState(),
+                ),
+              )
+            else if (canReorder)
+              SliverReorderableList(
+                itemCount: todos.length,
+                onReorder: controller.reorder,
+                itemBuilder: (_, index) {
+                  final todo = todos[index];
+                  return TodoCard(
                     key: ValueKey('todo_${todo.id}'),
                     todo: todo,
                     onToggle: () => controller.toggleCompleted(todo.id),
@@ -88,12 +77,35 @@ class DashboardView extends GetView<DashboardController> {
                       arguments: todo.id,
                     ),
                     isDashboard: true,
-                  ),
-                );
-              },
-            ),
-          const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
-        ],
+                  );
+                },
+              )
+            else
+              SliverList.separated(
+                itemCount: todos.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (_, index) {
+                  final todo = todos[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TodoCard(
+                      key: ValueKey('todo_${todo.id}'),
+                      todo: todo,
+                      onToggle: () => controller.toggleCompleted(todo.id),
+                      onDelete: () => controller.deleteTodo(todo.id),
+                      onEdit: () => onOpenForm(context, existing: todo),
+                      onOpenDetail: () => Get.toNamed(
+                        Routes.todoDetail,
+                        arguments: todo.id,
+                      ),
+                      isDashboard: true,
+                    ),
+                  );
+                },
+              ),
+            const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+          ],
+        ),
       );
     });
   }
@@ -236,9 +248,7 @@ class _FilterBar extends StatelessWidget {
         content: TextField(
           controller: textController,
           decoration: InputDecoration(
-            hintText: voiceMode
-                ? 'smart.voice.hint'.tr
-                : 'smart.add.hint'.tr,
+            hintText: voiceMode ? 'smart.voice.hint'.tr : 'smart.add.hint'.tr,
           ),
           autofocus: true,
         ),
@@ -278,7 +288,7 @@ class _HomeEmptyState extends StatelessWidget {
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: theme.colorScheme.primary.withOpacity(0.08),
+              color: theme.colorScheme.primary.withValues(alpha: 0.08),
             ),
             child: Icon(
               Icons.fact_check_outlined,

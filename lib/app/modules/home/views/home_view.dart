@@ -1,16 +1,15 @@
+import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../data/models/todo.dart';
 import '../../bin/controllers/bin_controller.dart';
 import '../../bin/views/bin_view.dart';
-import '../../dashboard/controllers/dashboard_controller.dart';
 import '../../dashboard/views/dashboard_view.dart';
 import '../../done/views/done_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/todo_form.dart';
-import 'todo_detail_view.dart';
 import '../../../routes/app_routes.dart';
 import '../../notifications/controllers/notifications_controller.dart';
 import '../../notifications/views/notifications_view.dart';
@@ -145,6 +144,9 @@ class HomeView extends GetView<HomeController> {
                   ),
               ],
             ),
+      floatingActionButtonLocation: tabIndex == 0
+          ? FloatingActionButtonLocation.endDocked
+          : FloatingActionButtonLocation.centerDocked,
       floatingActionButton: tabIndex == 0
           ? FloatingActionButton.extended(
               key: addTodoFabKey,
@@ -167,76 +169,87 @@ class HomeView extends GetView<HomeController> {
       ),
       bottomNavigationBar: Obx(() {
         final unread = notifCtrl.unreadCount;
-        Widget notifIcon(bool selected) => Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  selected ? Icons.notifications : Icons.notifications_none,
-                ),
-                if (unread > 0)
-                  Positioned(
-                    right: -6,
-                    top: -6,
-                    child: Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        unread > 9 ? '9+' : unread.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
+        final theme = Theme.of(context);
+        final labels = [
+          'nav.checks'.tr,
+          'nav.completed'.tr,
+          'nav.archive'.tr,
+          'nav.notifications'.tr,
+          'nav.profile'.tr,
+        ];
+        final icons = [
+          Icons.fact_check_outlined,
+          Icons.done_all_outlined,
+          Icons.delete_outline,
+          Icons.notifications_none,
+          Icons.person_outline,
+        ];
+        Widget buildIcon(int index, bool isActive) {
+          final color = isActive
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant;
+          if (index != 3) return Icon(icons[index], color: color);
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(
+                isActive ? Icons.notifications : Icons.notifications_none,
+                color: color,
+              ),
+              if (unread > 0)
+                Positioned(
+                  right: -8,
+                  top: -6,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      unread > 9 ? '9+' : unread.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-              ],
-            );
-        return NavigationBar(
-          selectedIndex: tabIndex,
-          onDestinationSelected: controller.changeTab,
-          destinations: [
-            NavigationDestination(
-              icon: const Icon(Icons.fact_check_outlined),
-              selectedIcon: const Icon(Icons.fact_check),
-              label: 'nav.checks'.tr,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.done_all_outlined),
-              selectedIcon: const Icon(Icons.done_all),
-              label: 'nav.completed'.tr,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.delete_outline),
-              selectedIcon: const Icon(Icons.delete),
-              label: 'nav.archive'.tr,
-            ),
-            NavigationDestination(
-              icon: notifIcon(false),
-              selectedIcon: notifIcon(true),
-              label: 'nav.notifications'.tr,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.person_outline),
-              selectedIcon: const Icon(Icons.person),
-              label: 'nav.profile'.tr,
-            ),
-          ],
+                ),
+            ],
+          );
+        }
+
+        final showFab = tabIndex == 0;
+        return AnimatedBottomNavigationBar.builder(
+          itemCount: icons.length,
+          tabBuilder: (index, isActive) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              buildIcon(index, isActive),
+              const SizedBox(height: 4),
+              Text(
+                labels[index],
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: isActive
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          activeIndex: tabIndex,
+          gapLocation: showFab ? GapLocation.end : GapLocation.none,
+          notchSmoothness: NotchSmoothness.softEdge,
+          leftCornerRadius: 24,
+          rightCornerRadius: showFab ? 0 : 24,
+          height: 72,
+          backgroundColor: theme.colorScheme.surface,
+          onTap: controller.changeTab,
         );
       }),
     );
-  }
-}
-
-class _SortMenu extends GetView<DashboardController> {
-  const _SortMenu();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
   }
 }

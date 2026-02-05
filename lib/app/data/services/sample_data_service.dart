@@ -2,8 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 
-import '../models/todo.dart';
-
 class SampleDataService extends GetxService {
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;

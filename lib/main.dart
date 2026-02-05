@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 import 'app/controllers/app_controller.dart';
 import 'app/data/repositories/profile_repository.dart';
@@ -16,6 +17,8 @@ import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
 import 'app/modules/home/views/home_view.dart';
 import 'app/modules/home/bindings/home_binding.dart';
+import 'app/widgets/custom_loading_footer_widget.dart';
+import 'app/widgets/custom_refresh_header_widget.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -49,32 +52,38 @@ class ChecklistApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final appController = Get.find<AppController>();
     return Obx(
-      () => GetMaterialApp(
-        title: 'SafeList',
-        debugShowCheckedModeBanner: false,
-        translations: AppTranslations(),
-        locale: appController.locale,
-        fallbackLocale: AppTranslations.en,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4)),
-          useMaterial3: true,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6750A4),
-            brightness: Brightness.dark,
+      () => RefreshConfiguration(
+        headerBuilder: () => const CustomRefreshHeaderWidget(),
+        footerBuilder: () => const CustomLoadingFooterWidget(),
+        hideFooterWhenNotFull: true,
+        child: GetMaterialApp(
+          title: 'SafeList',
+          debugShowCheckedModeBanner: false,
+          translations: AppTranslations(),
+          locale: appController.locale,
+          fallbackLocale: AppTranslations.en,
+          theme: ThemeData(
+            colorScheme:
+                ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4)),
+            useMaterial3: true,
+            visualDensity: VisualDensity.adaptivePlatformDensity,
           ),
-          useMaterial3: true,
-      visualDensity: VisualDensity.adaptivePlatformDensity,
-        ),
-        themeMode: appController.themeMode,
-        initialRoute: AppPages.initialRoute(appController),
-        getPages: AppPages.pages,
-        unknownRoute: GetPage(
-          name: Routes.home,
-          page: () => const HomeView(),
-          binding: HomeBinding(),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF6750A4),
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+            visualDensity: VisualDensity.adaptivePlatformDensity,
+          ),
+          themeMode: appController.themeMode,
+          initialRoute: AppPages.initialRoute(appController),
+          getPages: AppPages.pages,
+          unknownRoute: GetPage(
+            name: Routes.home,
+            page: () => const HomeView(),
+            binding: HomeBinding(),
+          ),
         ),
       ),
     );

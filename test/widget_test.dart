@@ -7,8 +7,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:safelist/main.dart';
-
 void main() {
   testWidgets('placeholder smoke test', (tester) async {}, skip: true);
 }

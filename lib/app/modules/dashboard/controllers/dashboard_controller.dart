@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 import '../../../data/models/todo.dart';
 import '../../../data/repositories/todo_repository.dart';
@@ -11,6 +12,11 @@ class DashboardController extends GetxController {
   final Rx<TodoPriority?> _priorityFilter = Rx<TodoPriority?>(null);
   final RxString _categoryFilter = ''.obs;
   final RxBool _urgentOnly = false.obs;
+  final RxBool _isLoading = false.obs;
+  static const _pageSize = 10;
+  final RxInt _page = 1.obs;
+  final RefreshController refreshController =
+      RefreshController(initialRefresh: false);
 
   List<Todo> get todos {
     final list = _repository.sortedActive;
@@ -40,6 +46,12 @@ class DashboardController extends GetxController {
     return filtered;
   }
 
+  List<Todo> get pagedTodos {
+    final list = todos;
+    final end = (_page.value * _pageSize).clamp(0, list.length);
+    return list.take(end).toList();
+  }
+
   SortOption get sortOption => _repository.sortOption;
   int get totalCount => _repository.totalCount;
   int get completedCount => _repository.completedCount;
@@ -66,6 +78,8 @@ class DashboardController extends GetxController {
       _categoryFilter.value = category ?? '';
   void toggleUrgentOnly() => _urgentOnly.value = !_urgentOnly.value;
   bool get urgentOnly => _urgentOnly.value;
+  bool get isLoading => _isLoading.value;
+  bool get hasMore => _page.value * _pageSize < todos.length;
 
   void reorder(int oldIndex, int newIndex) =>
       _repository.moveTodo(oldIndex, newIndex);
@@ -111,5 +125,33 @@ class DashboardController extends GetxController {
       dueDate: dueDate,
       category: category,
     );
+  }
+
+  @override
+  Future<void> refresh() async {
+    _isLoading.value = true;
+    try {
+      _page.value = 1;
+      await _repository.reloadFromSource();
+      refreshController.resetNoData();
+      refreshController.refreshCompleted();
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  void loadMore() {
+    if (hasMore) {
+      _page.value += 1;
+      refreshController.loadComplete();
+    } else {
+      refreshController.loadNoData();
+    }
+  }
+
+  @override
+  void onClose() {
+    refreshController.dispose();
+    super.onClose();
   }
 }

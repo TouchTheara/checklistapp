@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../../data/models/todo.dart';
 import '../controllers/bin_controller.dart';
 
@@ -45,9 +45,8 @@ class BinView extends GetView<BinController> {
         actions: [
           Obx(
             () => TextButton.icon(
-              onPressed: controller.hasBinItems
-                  ? () => _confirmEmpty(context)
-                  : null,
+              onPressed:
+                  controller.hasBinItems ? () => _confirmEmpty(context) : null,
               icon: const Icon(Icons.delete_sweep_outlined),
               label: Text('action.emptyArchive'.tr),
             ),
@@ -66,23 +65,50 @@ class BinBody extends GetView<BinController> {
   Widget build(BuildContext context) {
     return Obx(() {
       final deleted = controller.binTodos;
-      if (deleted.isEmpty) {
-        return const _BinEmptyState();
-      }
-
-      return ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemBuilder: (_, index) {
-          final todo = deleted[index];
-          return _BinItemCard(
-            todo: todo,
-            onRestore: () => controller.restoreTodo(todo.id),
-            onDeleteForever: () => controller.deleteForever(todo.id),
-          );
-        },
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemCount: deleted.length,
-      );
+      return deleted.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 24),
+                _BinEmptyState(),
+                SizedBox(height: 24),
+              ],
+            )
+          : SmartRefresher(
+              controller: controller.refreshController,
+              enablePullDown: true,
+              onRefresh: () async {
+                await controller.refresh();
+                controller.refreshController.refreshCompleted();
+                controller.refreshController.resetNoData();
+              },
+              enablePullUp: controller.hasMore,
+              onLoading: () {
+                controller.loadMore();
+                if (controller.hasMore) {
+                  controller.refreshController.loadComplete();
+                } else {
+                  controller.refreshController.loadNoData();
+                }
+              },
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: deleted.length,
+                itemBuilder: (_, index) {
+                  final todo = deleted[index];
+                  return Padding(
+                    padding: EdgeInsets.only(
+                        bottom: index == deleted.length - 1 ? 0 : 12),
+                    child: _BinItemCard(
+                      todo: todo,
+                      onRestore: () => controller.restoreTodo(todo.id),
+                      onDeleteForever: () => controller.deleteForever(todo.id),
+                    ),
+                  );
+                },
+              ));
     });
   }
 }
@@ -127,8 +153,7 @@ class _BinItemCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (todo.description != null &&
-                todo.description!.trim().isNotEmpty)
+            if (todo.description != null && todo.description!.trim().isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(

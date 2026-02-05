@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:collection/collection.dart';
-
 import '../../../data/models/app_notification.dart';
 import '../../../data/models/todo.dart';
 import '../../../data/repositories/todo_repository.dart';
 import '../../../data/services/auth_service.dart';
 import '../controllers/notifications_controller.dart';
+import 'package:uuid/uuid.dart';
+
+const _uuid = Uuid();
 
 class NotificationDetailView extends StatelessWidget {
   const NotificationDetailView({super.key, required this.notification});
@@ -40,44 +41,32 @@ class NotificationDetailView extends StatelessWidget {
     if (notification.todoId != null) {
       todo = repo.rawTodos.firstWhereOrNull((t) => t.id == notification.todoId);
       if (todo != null && auth.userId != null) {
-        member =
-            todo.members.firstWhereOrNull((m) => m.userId == auth.userId);
+        member = todo.members.firstWhereOrNull((m) => m.userId == auth.userId);
       }
     }
 
-    if (todo == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('notifications.title'.tr),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.notifications_off_outlined,
-                  size: 72, color: theme.colorScheme.outline),
-              const SizedBox(height: 12),
-              Text(
-                'notifications.empty.detail'.tr,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(color: theme.colorScheme.outline),
-              ),
-              if (notification.todoId != null) ...[
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    controller.markRead(notification.id);
-                    Get.toNamed('/todo', arguments: notification.todoId);
-                  },
-                  icon: const Icon(Icons.open_in_new),
-                  label: Text('notifications.openTask'.tr),
-                ),
-              ],
-            ],
-          ),
-        ),
-      );
-    }
+    // Build a lightweight fallback task if not yet loaded so user can respond.
+    final effectiveTodo = todo ??
+        Todo(
+          id: notification.todoId ?? _uuid.v4(),
+          title: notification.title.isNotEmpty
+              ? notification.title
+              : (notification.body.isNotEmpty
+                  ? notification.body
+                  : 'notifications.task'.trParams({'title': ''})),
+          members: auth.userId == null
+              ? const []
+              : [
+                  TaskMember(
+                    userId: auth.userId,
+                    name: auth.name ?? '',
+                    email: auth.email ?? '',
+                    status: InviteStatus.pending,
+                  )
+                ],
+        );
+    member ??=
+        effectiveTodo.members.firstWhereOrNull((m) => m.userId == auth.userId);
 
     return Scaffold(
       appBar: AppBar(
@@ -120,20 +109,30 @@ class NotificationDetailView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'notifications.task'.trParams({'title': todo!.title}),
+              'notifications.task'.trParams({'title': effectiveTodo.title}),
               style: theme.textTheme.bodyMedium
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
+            if (member != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Status: ${member.status.label}',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.outline),
+              ),
+            ],
             const SizedBox(height: 16),
             if (notification.type == AppNotificationType.taskInvite &&
-                todo != null &&
-                member != null)
+                notification.todoId != null &&
+                (member == null || member.status == InviteStatus.pending))
               Row(
                 children: [
                   TextButton(
                     onPressed: () {
+                      final uid = member?.userId ?? auth.userId ?? '';
+                      if (uid.isEmpty) return;
                       repo.updateMemberStatus(
-                          todo!.id, member!.userId!, InviteStatus.cancelled);
+                          effectiveTodo.id, uid, InviteStatus.cancelled);
                       controller.markRead(notification.id);
                     },
                     child: Text('notifications.decline'.tr),
@@ -141,9 +140,14 @@ class NotificationDetailView extends StatelessWidget {
                   const SizedBox(width: 8),
                   FilledButton(
                     onPressed: () {
+                      final uid = member?.userId ?? auth.userId ?? '';
+                      if (uid.isEmpty) return;
                       repo.updateMemberStatus(
-                          todo!.id, member!.userId!, InviteStatus.accepted);
+                          effectiveTodo.id, uid, InviteStatus.accepted);
                       controller.markRead(notification.id);
+                      if (!repo.rawTodos.any((t) => t.id == effectiveTodo.id)) {
+                        repo.addTodo(effectiveTodo.copyWith());
+                      }
                     },
                     child: Text('notifications.accept'.tr),
                   ),

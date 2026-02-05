@@ -11,6 +11,7 @@ import '../data/repositories/profile_repository.dart';
 import '../modules/home/controllers/home_controller.dart';
 import '../modules/home/bindings/home_binding.dart';
 import '../data/services/notification_service.dart';
+import '../modules/notifications/controllers/notifications_controller.dart';
 
 class AppController extends GetxController {
   AppController(
@@ -58,6 +59,7 @@ class AppController extends GetxController {
     _userName.value = _authService.name ?? '';
     _userEmail.value = _authService.email ?? '';
     _notificationService.onLogin(_authService.userId);
+    _refreshNotificationsForUser();
     _syncUserData();
   }
 
@@ -87,6 +89,7 @@ class AppController extends GetxController {
       await _seedDemoIfEmpty();
       _resetHomeTab();
       _notificationService.onLogin(_authService.userId);
+      _refreshNotificationsForUser();
     }
     return ok;
   }
@@ -109,6 +112,7 @@ class AppController extends GetxController {
       await _seedDemoIfEmpty();
       _resetHomeTab();
       _notificationService.onLogin(_authService.userId);
+      _refreshNotificationsForUser();
     }
     return ok;
   }
@@ -116,6 +120,7 @@ class AppController extends GetxController {
   Future<void> logout() async {
     // Handle notification cleanup before signing out (requires auth).
     await _notificationService.onLogout();
+    _clearNotifications();
     await _authService.logout();
     _loggedIn.value = false;
     await _todoRepository.clearForLogout();
@@ -142,6 +147,7 @@ class AppController extends GetxController {
       await _seedDemoIfEmpty();
       _resetHomeTab();
       _notificationService.onLogin(_authService.userId);
+      _refreshNotificationsForUser();
     } else if (error != null && error.isNotEmpty) {
       Get.snackbar('auth.failed'.tr, error,
           snackPosition: SnackPosition.BOTTOM);
@@ -164,6 +170,18 @@ class AppController extends GetxController {
   void _resetHomeTab() {
     if (Get.isRegistered<HomeController>()) {
       Get.find<HomeController>().changeTab(0);
+    }
+  }
+
+  void _refreshNotificationsForUser() {
+    if (Get.isRegistered<NotificationsController>()) {
+      Get.find<NotificationsController>().reloadForCurrentUser();
+    }
+  }
+
+  void _clearNotifications() {
+    if (Get.isRegistered<NotificationsController>()) {
+      Get.find<NotificationsController>().clearForLogout();
     }
   }
 

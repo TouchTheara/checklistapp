@@ -26,6 +26,9 @@ class DoneView extends GetView<DoneController> {
         emptyDescription: 'done.empty.desc',
         emptyIcon: Icons.celebration_outlined,
         isDashboard: false,
+        refreshController: controller.refreshController,
+        onRefresh: controller.refresh,
+        onLoading: controller.loadMore,
       );
     });
   }

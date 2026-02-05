@@ -254,11 +254,13 @@ class _TodoFormState extends State<TodoForm> {
       lastDate: lastDate,
     );
     if (date == null) return;
+    if (!mounted) return;
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_reminderAt ?? initialDate),
     );
     if (time == null) return;
+    if (!mounted) return;
     final combined = DateTime(
       date.year,
       date.month,
@@ -837,7 +839,7 @@ class _TodoFormState extends State<TodoForm> {
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.25),
+                color: Colors.black.withValues(alpha: 0.25),
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(20)),
               ),

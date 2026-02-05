@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../models/todo.dart';
@@ -71,6 +72,10 @@ class TodoRepository extends GetxService {
       _sortOption.value = savedSortOption;
     }
     _todos.refresh();
+  }
+
+  Future<void> reloadFromSource() async {
+    await loadForUser(_userId);
   }
 
   SortOption get sortOption => _sortOption.value;
@@ -434,16 +439,15 @@ class TodoRepository extends GetxService {
     try {
       final exists = await File(filePath).exists();
       if (!exists) {
-        // ignore: avoid_print
-        print('Upload attachment failed: file missing at $filePath');
+        debugPrint('Upload attachment failed: file missing at $filePath');
         return null;
       }
       final file = File(filePath);
-      print('Upload attachment:  $file');
+      debugPrint('Upload attachment:  $file');
       final fileName = file.uri.pathSegments.last;
       final ref = _storage.ref().child(
           'users/$_userId/todos/$todoId/attachments/${DateTime.now().millisecondsSinceEpoch}_$fileName');
-      print('Upload ref:  $ref');
+      debugPrint('Upload ref:  $ref');
 
       final snapshot = await ref.putFile(file);
       if (snapshot.state == TaskState.success) {
@@ -456,28 +460,23 @@ class TodoRepository extends GetxService {
               await Future.delayed(Duration(milliseconds: 400 * (i + 1)));
               continue;
             } else {
-              // ignore: avoid_print
-              print(
+              debugPrint(
                   'Download URL failed (${e.code}) for ${snapshot.ref.fullPath} in ${snapshot.ref.bucket}: ${e.message}');
               return null;
             }
           }
         }
-        // ignore: avoid_print
-        print(
+        debugPrint(
             'Download URL failed after retries for ${snapshot.ref.fullPath} in ${snapshot.ref.bucket}');
         return null;
       }
-      // ignore: avoid_print
-      print('Upload not successful. State: ${snapshot.state}');
+      debugPrint('Upload not successful. State: ${snapshot.state}');
       return null;
     } on FirebaseException catch (e) {
-      // ignore: avoid_print
-      print('Upload attachment failed (${e.code}): ${e.message}');
+      debugPrint('Upload attachment failed (${e.code}): ${e.message}');
       return null;
     } catch (e) {
-      // ignore: avoid_print
-      print('Upload attachment failed: $e');
+      debugPrint('Upload attachment failed: $e');
       return null;
     }
   }

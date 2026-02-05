@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 import '../../../data/models/todo.dart';
 import '../../../routes/app_routes.dart';
@@ -16,6 +17,9 @@ class TodoListView extends StatelessWidget {
     this.emptyDescription = 'empty.desc',
     this.emptyIcon = Icons.check_circle_outline,
     this.isDashboard = false,
+    this.refreshController,
+    this.onRefresh,
+    this.onLoading,
   });
 
   final List<Todo> todos;
@@ -26,36 +30,51 @@ class TodoListView extends StatelessWidget {
   final String emptyDescription;
   final IconData emptyIcon;
   final bool isDashboard;
+  final RefreshController? refreshController;
+  final Future<void> Function()? onRefresh;
+  final Future<void> Function()? onLoading;
 
   @override
   Widget build(BuildContext context) {
-    if (todos.isEmpty) {
-      return _EmptyState(
-        title: emptyTitle,
-        description: emptyDescription,
-        icon: emptyIcon,
+    final listView = todos.isEmpty
+        ? _EmptyState(
+            title: emptyTitle,
+            description: emptyDescription,
+            icon: emptyIcon,
+          )
+        : ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+            itemBuilder: (_, index) {
+              final todo = todos[index];
+              return TodoCard(
+                key: ValueKey('todo_${todo.id}'),
+                todo: todo,
+                onToggle: () => onToggle(todo.id),
+                onDelete: () => onDelete(todo.id),
+                onEdit: () => onEdit(todo),
+                onOpenDetail: () => Get.toNamed(
+                  Routes.todoDetail,
+                  arguments: todo.id,
+                ),
+                isDashboard: isDashboard,
+              );
+            },
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemCount: todos.length,
+          );
+
+    if (refreshController != null) {
+      return SmartRefresher(
+        controller: refreshController!,
+        enablePullDown: onRefresh != null,
+        enablePullUp: onLoading != null,
+        onRefresh: onRefresh,
+        onLoading: onLoading,
+        child: listView,
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-      itemBuilder: (_, index) {
-        final todo = todos[index];
-        return TodoCard(
-          key: ValueKey('todo_${todo.id}'),
-          todo: todo,
-          onToggle: () => onToggle(todo.id),
-          onDelete: () => onDelete(todo.id),
-          onEdit: () => onEdit(todo),
-          onOpenDetail: () => Get.toNamed(
-            Routes.todoDetail,
-            arguments: todo.id,
-          ),
-          isDashboard: isDashboard,
-        );
-      },
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemCount: todos.length,
-    );
+
+    return listView;
   }
 }
 
@@ -266,45 +285,6 @@ class TodoCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAttachments(BuildContext context) {
-    if (todo.attachments.isEmpty) return const SizedBox.shrink();
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: SizedBox(
-        height: 72,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemBuilder: (_, index) {
-            final url = todo.attachments[index];
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: CachedNetworkImage(
-                  imageUrl: url,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                  ),
-                  errorWidget: (_, __, ___) => Container(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemCount: todo.attachments.length,
-        ),
-      ),
-    );
-  }
-
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
@@ -384,12 +364,10 @@ class _AnimatedCheckButton extends StatefulWidget {
   const _AnimatedCheckButton({
     required this.value,
     required this.onChanged,
-    this.semanticsLabel,
   });
 
   final bool value;
   final VoidCallback onChanged;
-  final String? semanticsLabel;
 
   @override
   State<_AnimatedCheckButton> createState() => _AnimatedCheckButtonState();
@@ -442,7 +420,6 @@ class _AnimatedCheckButtonState extends State<_AnimatedCheckButton>
     return Padding(
       padding: EdgeInsets.only(top: 1.5),
       child: Semantics(
-        label: widget.semanticsLabel,
         button: true,
         child: GestureDetector(
           onTap: _pending

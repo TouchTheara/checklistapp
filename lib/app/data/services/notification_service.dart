@@ -7,9 +7,18 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 
 import '../models/app_notification.dart';
 import '../models/todo.dart';
+
+class NotificationPage {
+  NotificationPage(
+      {required this.items, required this.lastDoc, required this.hasMore});
+  final List<AppNotification> items;
+  final DocumentSnapshot? lastDoc;
+  final bool hasMore;
+}
 
 class NotificationService extends GetxService {
   final _firestore = FirebaseFirestore.instance;
@@ -88,6 +97,27 @@ class NotificationService extends GetxService {
               .map((d) => AppNotification.fromJson(d.data()))
               .toList(),
         );
+  }
+
+  Future<NotificationPage> fetchPage(
+    String userId, {
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) async {
+    Query<Map<String, dynamic>> q = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+    if (startAfter != null) {
+      q = q.startAfterDocument(startAfter);
+    }
+    final snap = await q.get();
+    final items = snap.docs.map((d) => AppNotification.fromJson(d.data())).toList();
+    final last = snap.docs.isNotEmpty ? snap.docs.last : null;
+    final hasMore = snap.docs.length == limit;
+    return NotificationPage(items: items, lastDoc: last, hasMore: hasMore);
   }
 
   Future<void> addNotification({
@@ -215,17 +245,25 @@ class NotificationService extends GetxService {
       ),
       iOS: const DarwinNotificationDetails(),
     );
-    await _local.zonedSchedule(
-      todo.id.hashCode,
-      todo.title,
-      'Reminder: ${todo.title}',
-      when,
-      details,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      androidAllowWhileIdle: true,
-      payload: todo.id,
-    );
+    try {
+      await _local.zonedSchedule(
+        todo.id.hashCode,
+        todo.title,
+        'Reminder: ${todo.title}',
+        when,
+        details,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: todo.id,
+      );
+    } on PlatformException catch (e) {
+      if (e.code == 'exact_alarms_not_permitted') {
+        // On Android 12+ without exact alarm permission: skip scheduling.
+        return;
+      }
+      rethrow;
+    }
     if (_userId != null) {
       final n = AppNotification(
         title: 'Reminder set',
